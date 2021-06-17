@@ -1,0 +1,18 @@
+﻿@namespace MidwayCampaign.Pages.Games.MidwayGame
+@using MidwayEngine
+@using MidwayCampaign.Pages.Games.MidwayGame.TaskForces
+@inherits MidwayStatusBase
+
+<div class="MidwayStatusPane">
+  <div class="MidwayDateLine">
+    <div class="MidwayDateArea">
+      <span class="MidwayDateText MidwayDateTimeText">@this.gameDate</span>
+    </div>
+    <div class="MidwayTimeArea">
+      <span class="MidwayTimeText MidwayDateTimeText">@this.gameTime</span>
+    </div>
+  </div>
+  <TaskForceStatus forceType="ForceTypes.TaskForce16" />
+  <TaskForceStatus forceType="ForceTypes.TaskForce17" />
+  <TaskForceStatus forceType="ForceTypes.MidwayIsland" />
+</div>

@@ -1,0 +1,23 @@
+﻿@namespace MidwayCampaign.Pages.Games.MidwayGame
+@inherits MidwayGamePageBase
+
+<CascadingValue Value="@this.midway">
+  <div class="MidwayGameFrame">
+    <div class="MidwayTitleFrame">
+      <span class="MidwayTitleText">
+        The Midway Campaign
+      </span>
+    </div>
+    <div class="MidwayPlayGrid">
+      <div class="MidwayMapArea">
+        <MidwayMap />
+      </div>
+      <div class="MidwayStatusArea">
+        <MidwayStatus />        
+      </div>
+      <div class="MidwayCommandConsoleArea">
+        <MidwayConsole />
+      </div>
+    </div>
+  </div>
+</CascadingValue>

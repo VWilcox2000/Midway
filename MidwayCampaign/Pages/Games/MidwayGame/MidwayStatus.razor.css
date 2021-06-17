@@ -1,0 +1,46 @@
+﻿.MidwayStatusPane {
+  position: relative;
+  left: 0;
+  top: 0;
+  width: 100%;
+  bottom: 100%;
+  overflow: auto;
+}
+
+.MidwayDateLine {
+  position: relative;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: fit-content;
+  display: inline-grid;
+  grid-template-rows: min-content;
+  grid-template-columns: auto auto;
+  grid-auto-flow: column;
+  padding: 0px 6px 0 6px;
+}
+
+.MidwayDateArea {
+  align-items: start;
+}
+
+.MidwayTimeArea {
+  align-items: end;
+}
+
+.MidwayDateText {
+  text-align: start;
+}
+
+.MidwayTimeText {
+  text-align: end;
+  display: inline-grid;
+  width: 100%;
+}
+
+.MidwayDateTimeText {
+  font-family: Calibri;
+  font-size: 26px;
+  font-weight: 600;
+  color: black;
+}

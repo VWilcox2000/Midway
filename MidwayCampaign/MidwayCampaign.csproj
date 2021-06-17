@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+    <Platforms>AnyCPU;x64</Platforms>
+    <Nullable>enable</Nullable>
+    <StartupObject>MidwayCampaign.Program</StartupObject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Pages\Games\MidwayGame\MidwayConsole.razor.css" />
+    <None Remove="Pages\Games\MidwayGame\MidwayGamePage.razor.css" />
+    <None Remove="Pages\Games\MidwayGame\MidwayMap.razor.css" />
+    <None Remove="Pages\Games\MidwayGame\MidwayStatus.razor.css" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Pages\Games\MidwayGame\MidwayConsole.razor.css">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Pages\Games\MidwayGame\MidwayMap.razor.css">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Pages\Games\MidwayGame\MidwayStatus.razor.css">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Pages\Games\MidwayGame\MidwayGamePage.razor.css">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Midway\Midway.csproj" />
+  </ItemGroup>
+
+</Project>

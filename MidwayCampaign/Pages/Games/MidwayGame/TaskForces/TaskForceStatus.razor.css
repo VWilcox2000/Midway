@@ -1,0 +1,53 @@
+﻿.taskForceHeaderLine {
+  display: inline-grid;
+  width: calc(100% - 8px);
+  margin: 0 4px;
+  border: 1px solid slategray;
+  background-color: darkslategray;
+  padding: 0 8px;
+  border-radius: 4px;
+}
+
+.taskForceTitleArea {
+  display: inline-grid;
+  grid-template-columns: 140px min-content min-content min-content min-content min-content min-content;
+  white-space: nowrap;
+}
+
+.taskForceTitleText {
+  font-family: Calibri;
+  font-size: 20px;
+  color: white;
+}
+
+.taskForceInfoText {
+  font-family: Calibri;
+  font-size: 19px;
+  color: lightsteelblue;
+  margin-left: 16px;
+}
+
+.taskForceBaseArea {
+  left: 10px;
+  width: calc(100% - 17px);
+  display: inline-grid;
+  border-left: 1px solid slategray;
+  border-bottom: 1px solid slategray;
+  border-right: 1px solid slategray;
+  grid-template-rows: repeat(10, min-content);
+  grid-template-columns: 160px min-content auto;
+  grid-auto-flow: column;
+  grid-column-gap: 5px;
+  position: relative;
+  margin-bottom: 4px;
+  border-radius: 0 0 6px 6px;
+  padding: 0 4px;
+}
+
+.taskForceCarrierBaseArea {
+  background-color: #e0f0ff;
+}
+
+.taskForceMidwayBaseArea {
+  background-color: #e0fff0;
+}

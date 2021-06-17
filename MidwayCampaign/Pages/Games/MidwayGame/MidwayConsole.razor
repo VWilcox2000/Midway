@@ -1,0 +1,13 @@
+﻿@namespace MidwayCampaign.Pages.Games.MidwayGame
+@inherits MidwayConsoleBase
+
+<div class="MidwayConsoleGrid">
+  <textarea id="logTextArea"
+            class="MidwayConsoleLog"
+            readonly
+            @bind="this.logLineText"></textarea>
+  <input type="text" autofocus class="MidwayConsoleInput"
+         @bind-value:event="oninput"
+         @bind-value="this.consoleEntry"
+         @onkeydown="this.onKeyPress"/>
+</div>

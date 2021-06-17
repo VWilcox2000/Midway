@@ -1,0 +1,165 @@
+﻿@namespace MidwayCampaign.Pages.Games.MidwayGame.TaskForces
+@inherits AirBaseStatusBase
+
+<div class="airBaseLabelArea @this.rowModifier">
+  <span class="airBaseLabelText">
+    @this.airBaseName
+  </span>
+  <div class="airBaseHealthArea">
+    @switch (this.airBaseRef.airBase)
+    {
+      case MidwayEngine.AirBases.Enterprise:
+      case MidwayEngine.AirBases.Hornet:
+      case MidwayEngine.AirBases.Yorktown:
+        {
+          string prefix;
+          string suffix;
+
+          switch(this.airBaseRef.airBase)
+          {
+            case MidwayEngine.AirBases.Enterprise:
+            default:
+              prefix = "cv6_";
+              break;
+            case MidwayEngine.AirBases.Hornet:
+              prefix = "cv8_";
+              break;
+            case MidwayEngine.AirBases.Yorktown:
+              prefix = "cv5_";
+              break;
+          }
+          if (this.airBaseRef.damage >= 100)
+          {
+            suffix = "sunk";
+          }
+          else if (this.airBaseRef.damage >= 60)
+          {
+            suffix = "heavy_damage";
+          }
+          else if (this.airBaseRef.damage >= 30)
+          {
+            suffix = "moderate_damage";
+          }
+          else if (this.airBaseRef.damage > 0)
+          {
+            suffix = "light_damage";
+          }
+          else
+          {
+            suffix = "healthy";
+          }
+          <div class="cv_health @string.Concat(prefix, suffix)"></div>
+        }
+        break;
+      default:
+        if (this.airBaseRef.damage >= 100)
+        {
+          if (this.airBase == MidwayEngine.AirBases.Midway)
+          {
+            <span class="airBaseHealthText airBaseDestroyed">Destroyed</span>
+          }
+          else
+          {
+            <span class="airBaseHealthText airBaseDestroyed">Sunk</span>
+          }
+        }
+        else if (this.airBaseRef.damage >= 60)
+        {
+          <span class="airBaseHealthText airBaseHeavilyDamaged">Heavily Damaged out of Operation</span>
+        }
+        else if (this.airBaseRef.damage > 0)
+        {
+          <span class="airBaseHealthText airBaseLightlyDamaged">Lightly Damaged</span>
+        }
+        else
+        {
+          <span class="airBaseHealthText airBaseFullyOperational">Fully Operational</span>
+        }
+        break;
+    }
+  </div>
+</div>
+<div class="airBaseStatusArea @this.rowModifier">
+  @if (this.airBaseRef.damage < 60)
+  {
+    <div class="airBaseCapArea">
+      <div class="airBaseCapLabelArea">
+        <span class="airBaseCapLabelText">CAP</span>
+      </div>
+      @if (this.airBaseRef.airBase == MidwayEngine.AirBases.Midway)
+      {
+        <div class="airBaseCapValueArea airBaseMidwayFighterValue">
+          <span class="airBaseCapValueText">@this.airBaseRef.cap</span>
+        </div>
+      }
+      else
+      {
+        <div class="airBaseCapValueArea airBaseFighterValue">
+          <span class="airBaseCapValueText">@this.airBaseRef.cap</span>
+        </div>
+      }
+    </div>
+
+    <div class="airBaseArmedFlightGroupArea">
+      <div class="airBaseArmedFlightGroupLabelArea @this.armingModifier">
+        @if (this.airBaseRef.airBase == MidwayEngine.AirBases.Midway)
+        {
+          <span class="airBaseArmedFlightGroupLabelText">Runway</span>
+        }
+        else
+        {
+          <span class="airBaseArmedFlightGroupLabelText">Deck</span>
+        }
+      </div>
+      @if (this.airBaseRef.airBase == MidwayEngine.AirBases.Midway)
+      {
+        <div class="airBaseArmedFlightGroupValueArea airBaseMidwayFighterValue">
+          <span class="airBaseArmedFlightGroupValueText">@(this.airBaseRef.armed.f4fs%1000)</span>
+        </div>
+      }
+      else
+      {
+        <div class="airBaseArmedFlightGroupValueArea airBaseFighterValue">
+          <span class="airBaseArmedFlightGroupValueText">@(this.airBaseRef.armed.f4fs%1000)</span>
+        </div>
+      }
+      <div class="airBaseArmedFlightGroupValueArea airBaseSBDValue">
+        <span class="airBaseArmedFlightGroupValueText">@(this.airBaseRef.armed.sbds%1000)</span>
+      </div>
+      <div class="airBaseArmedFlightGroupValueArea airBaseTBDValue">
+        <span class="airBaseArmedFlightGroupValueText">@(this.airBaseRef.armed.tbds%1000)</span>
+      </div>
+    </div>
+
+    <div class="airBaseBelowDeckFlightGroupArea">
+      <div class="airBaseBelowDeckFlightGroupLabelArea">
+        @if (this.airBaseRef.airBase == MidwayEngine.AirBases.Midway)
+        {
+          <span class="airBaseBelowDeckFlightGroupLabelText">Hangar</span>
+        }
+        else
+        {
+          <span class="airBaseBelowDeckFlightGroupLabelText">Below</span>
+        }
+      </div>
+      @if (this.airBaseRef.airBase == MidwayEngine.AirBases.Midway)
+      {
+        <div class="airBaseBelowDeckFlightGroupValueArea airBaseMidwayFighterValue">
+          <span class="airBaseBelowDeckFlightGroupValueText">@(this.airBaseRef.below.f4fs%1000)</span>
+        </div>
+      }
+      else
+      {
+        <div class="airBaseBelowDeckFlightGroupValueArea airBaseFighterValue">
+          <span class="airBaseBelowDeckFlightGroupValueText">@(this.airBaseRef.below.f4fs%1000)</span>
+        </div>
+      }
+      <div class="airBaseBelowDeckFlightGroupValueArea airBaseSBDValue">
+        <span class="airBaseBelowDeckFlightGroupValueText">@(this.airBaseRef.below.sbds%1000)</span>
+      </div>
+      <div class="airBaseBelowDeckFlightGroupValueArea airBaseTBDValue">
+        <span class="airBaseBelowDeckFlightGroupValueText">@(this.airBaseRef.below.tbds%1000)</span>
+      </div>
+    </div>
+  }
+</div>

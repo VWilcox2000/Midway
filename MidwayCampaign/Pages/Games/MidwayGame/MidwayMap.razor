@@ -1,0 +1,24 @@
+﻿@namespace MidwayCampaign.Pages.Games.MidwayGame
+@using MidwayEngine
+@inherits MidwayMapBase
+
+<div class="MidwayMapFrame">
+  <div class="MidwayMapGridFrame">
+    @for (int i = 0; i < 12; ++i)
+    {
+      @for (int j = 0; j < 12; ++j)
+      {
+        <div class="MidwayGridSquare" />
+      }
+    }
+  </div>
+  @foreach (ForceRef force in this.midway!.forces)
+  {
+    if (force.visible)
+    {
+      <span class="forceText" style="@this.forceStyle(force)">
+        @force.letter
+      </span>
+    }
+  }
+</div>

@@ -1,0 +1,276 @@
+﻿.airBaseLabelArea {
+  padding: 2px;
+}
+
+.airBaseLabelText {
+  display: inline-grid;
+  font-family: Calibri;
+  font-size: 22px;
+  color: black;
+  white-space: nowrap;
+}
+
+.airBaseStatusArea {
+  display: inline-grid;
+  grid-column-start: 2;
+  grid-template-rows: min-content min-content;
+  grid-template-columns: min-content min-content min-content;
+  white-space: normal;
+  grid-auto-flow: column;
+  grid-column-gap: 10px;
+}
+
+.airBaseHealthArea {
+
+}
+
+.airBaseHealthText {
+  white-space: nowrap;
+  margin-left: 10px;
+  font-family: Calibri;
+  font-size: 18px;
+}
+
+.airBaseDestroyed {
+  color: red;
+}
+
+.airBaseHeavilyDamaged {
+  color: orange;
+}
+
+.airBaseLightlyDamaged {
+  color: yellow;
+}
+
+.airBaseFullyOperational {
+  color: green;
+}
+
+.airBaseCapArea {
+  border: 1px solid slategray;
+  border-radius: 3px;
+  display: inline-grid;
+  grid-template-columns: min-content min-content;
+  box-shadow: rgba(0,0,0,0.3) 2px 2px 3px;
+  background-color: #f0f0f0;
+  margin: 6px 0 6px 0;
+  grid-column-start: 1;
+}
+
+.airBaseCapLabelArea {
+  padding: 0 4px;
+  background-color: slategray;
+}
+
+.airBaseCapLabelText {
+  font-family: Calibri;
+  font-size: 18px;
+  font-weight: bold;
+  color: white;
+  white-space: nowrap;
+}
+
+.airBaseCapValueArea {
+  padding: 0 4px 24px 0;
+  min-width: 39px;
+  text-align: center;
+}
+
+.airBaseCapValueText {
+  font-family: Calibri;
+  font-size: 18px;
+  color: black;
+}
+
+.airBaseArmedFlightGroupArea {
+  border: 1px solid slategray;
+  border-radius: 3px;
+  display: inline-grid;
+  grid-template-columns: min-content min-content min-content min-content;
+  box-shadow: rgba(0,0,0,0.3) 2px 2px 3px;
+  background-color: #f0f0f0;
+  margin: 6px 0 6px 0;
+  grid-column-start: 2;
+  grid-column-gap: 5px;
+}
+
+.airBaseArmedFlightGroupLabelArea {
+  padding: 0 4px;
+  background-color: slategray;
+}
+
+.airBaseArmedFlightGroupLabelText {
+  font-family: Calibri;
+  font-size: 18px;
+  font-weight: bold;
+  color: white;
+  white-space: nowrap;
+}
+
+.airBaseArmedFlightGroupValueArea {
+  padding: 0 4px 24px 0;
+  min-width: 40px;
+  text-align: center;
+}
+
+.airBaseArmedFlightGroupValueText {
+  font-family: Calibri;
+  font-size: 18px;
+  color: black;
+}
+
+.airBaseBelowDeckFlightGroupArea {
+  border: 1px solid slategray;
+  border-radius: 3px;
+  display: inline-grid;
+  grid-template-columns: min-content min-content min-content min-content;
+  box-shadow: rgba(0,0,0,0.3) 2px 2px 3px;
+  background-color: #f0f0f0;
+  margin: 6px 0 6px 0;
+  grid-column-start: 3;
+  grid-column-gap: 5px;
+}
+
+.airBaseBelowDeckFlightGroupLabelArea {
+  padding: 0 4px;
+  background-color: slategray;
+}
+
+.airBaseBelowDeckFlightGroupLabelText {
+  font-family: Calibri;
+  font-size: 18px;
+  font-weight: bold;
+  color: white;
+  white-space: nowrap;
+}
+
+.airBaseBelowDeckFlightGroupValueArea {
+  padding: 0 4px 24px 0;
+  min-width: 40px;
+  text-align: center;
+}
+
+.airBaseBelowDeckFlightGroupValueText {
+  font-family: Calibri;
+  font-size: 18px;
+  color: black;
+}
+
+.airBaseFighterValue {
+  background-image: url('/images/F4F.png');
+  background-repeat: no-repeat;
+  background-position-x: 3px;
+  background-position-y: bottom;
+  background-size: 30px;
+  margin-bottom: 2px;
+}
+
+.airBaseMidwayFighterValue {
+  background-image: url('/images/F4FandF2A.png');
+  background-repeat: no-repeat;
+  background-position-x: 6px;
+  background-position-y: bottom;
+  background-size: 60px;
+  min-width: 74px;
+  margin-bottom: 2px;
+}
+
+.airBaseSBDValue {
+  background-image: url('/images/SBD.png');
+  background-repeat: no-repeat;
+  background-position-x: 3px;
+  background-position-y: bottom;
+  background-size: 30px;
+  margin-bottom: 2px;
+}
+
+.airBaseTBDValue {
+  background-image: url('/images/TBD.png');
+  background-repeat: no-repeat;
+  background-position-x: 3px;
+  background-position-y: bottom;
+  background-size: 30px;
+  margin-bottom: 2px;
+}
+
+.airBaseNotFirstLine {
+  border-top: 1px solid lightgray;
+}
+
+.cv_health {
+  background-repeat: no-repeat;
+  background-position-x: center;
+  background-position-y: center;
+  background-size: contain;
+  height: 26px;
+  margin-bottom: 2px;
+}
+
+.cv5_healthy {
+  background-image: url('/images/CV5_Yorktown.png');
+}
+
+.cv5_light_damage {
+  background-image: url('/images/CV5_Yorktown_light_damage.png');
+}
+
+.cv5_moderate_damage {
+  background-image: url('/images/CV5_Yorktown_moderate_damage.png');
+}
+
+.cv5_heavy_damage {
+  background-image: url('/images/CV5_Yorktown_heavy_damage.png');
+}
+
+.cv5_sunk {
+  background-image: url('/images/CV5_Yorktown_sunk.png');
+}
+
+.cv6_healthy {
+  background-image: url('/images/CV6_Enterprise.png');
+}
+
+.cv6_light_damage {
+  background-image: url('/images/CV6_Enterprise_light_damage.png');
+}
+
+.cv6_moderate_damage {
+  background-image: url('/images/CV6_Enterprise_moderate_damage.png');
+}
+
+.cv6_heavy_damage {
+  background-image: url('/images/CV6_Enterprise_heavy_damage.png');
+}
+
+.cv6_sunk {
+  background-image: url('/images/CV6_Enterprise_sunk.png');
+}
+
+.cv8_healthy {
+  background-image: url('/images/CV8_Hornet.png');
+}
+
+.cv8_light_damage {
+  background-image: url('/images/CV8_Hornet_light_damage.png');
+}
+
+.cv8_moderate_damage {
+  background-image: url('/images/CV8_Hornet_moderate_damage.png');
+}
+
+.cv8_heavy_damage {
+  background-image: url('/images/CV8_Hornet_heavy_damage.png');
+}
+
+.cv8_sunk {
+  background-image: url('/images/CV8_Hornet_sunk.png');
+}
+
+.armingInProgress {
+  background-image: url(/images/arming.png);
+  background-repeat: no-repeat;
+  background-position-x: center;
+  background-position-y: 22px;
+  background-size: 30px;
+}

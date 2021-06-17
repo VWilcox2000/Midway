@@ -1,0 +1,38 @@
+﻿@namespace MidwayCampaign.Pages.Games.MidwayGame.TaskForces
+@using MidwayEngine 
+@inherits TaskForceStatusBase
+
+<div class="taskForceHeaderLine">
+  <div class="taskForceTitleArea">
+    <span class="taskForceTitleText">
+      @this.taskForceTitle
+    </span>
+    @if (this.forceType != ForceTypes.MidwayIsland)
+    {
+      <span class="taskForceInfoText">
+        @this.taskForceHeading
+      </span>
+      <span class="taskForceInfoText">
+        @this.taskForceSpeed
+      </span>
+    }
+    <span class="taskForceInfoText">
+      @this.taskForceGridX
+    </span>
+    <span class="taskForceInfoText">
+      &nbsp;x&nbsp;
+    </span>
+    <span class="taskForceInfoText">
+      @this.taskForceGridY
+    </span>
+  </div>
+</div>
+<div class="taskForceBaseArea @this.baseAreaColoring">
+  @foreach (AirBases airBase in this.airBases)
+  {
+    <AirBaseStatus shipType="@this.forceType"
+                   firstBase="firstBase"
+                   airBase="airBase" />
+    this.firstBase = false;
+  }
+</div>

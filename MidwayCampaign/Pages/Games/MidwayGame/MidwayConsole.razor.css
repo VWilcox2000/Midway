@@ -1,0 +1,23 @@
+﻿.MidwayConsoleGrid {
+  padding: 3px;
+  width: 100%;
+  height: 100%;
+  display: inline-grid;
+  grid-template-columns: auto;
+  grid-template-rows: auto min-content;
+  grid-auto-flow: column;
+  grid-row-gap: 3px;
+  background-color: darkgray;
+}
+
+.MidwayConsoleLog {
+  font-family: 'Lucida Console';
+  font-size: 14px;
+  resize: none;
+  color: black;
+}
+
+.MidwayConsoleInput {
+  font-family: Calibri;
+  font-size: 20px;
+}
