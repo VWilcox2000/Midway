@@ -122,7 +122,7 @@ namespace MidwayEngine
     //170 FOR I = 0 TO 9:S(I,9)=-1:NEXT:S6=.041:S7=.043:CLS:SCREEN 0:FOR X = 4 TO 7:LOCATE 12+X,1
 
     private int f9 = 1;
-    private bool j9; // midway intact
+    private bool j9; // midway intact <-- japanese lost???  why head 270 is true otherwise?
     private int v0; // victory points?
     private int v1; // victory points?
     private int v2; // victory points?
@@ -920,6 +920,26 @@ namespace MidwayEngine
       good = false;
       switch (parts[0])
       {
+        case "?":
+          this.output(
+            "{0} course IJNCV to Midway",
+            this.CourseTo(0, 5));
+          this.output(
+            "{0} course Midway to IJNCV",
+            this.CourseTo(5, 0));
+          this.output(
+            "{0} course TF-16 to IJNCV",
+            this.CourseTo(3, 0));
+          this.output(
+            "{0} course IJNCV to TF-16",
+            this.CourseTo(0, 3));
+          this.output(
+            "{0} course TF-17 to IJNCV",
+            this.CourseTo(4, 0));
+          this.output(
+            "{0} course IJNCV to TF-17",
+            this.CourseTo(0, 4));
+          break;
         case "0":
           this.AdvanceTime(0);
           good = true;
@@ -1620,6 +1640,93 @@ namespace MidwayEngine
       {
         this.F[2, 5] = 25M + 15M * mVal(this.c7 > 255);
       }
+      this.IJNCruisersBombardMidway();
+      this.UpdateIJNCarrierHeading();
+      this.UpdateIJNCarrierCAPs();
+
+      // resumse at line 1090 
+
+      this.taskForceUpdated?.Invoke();
+    }
+
+    private void UpdateIJNCarrierHeading()
+    {
+      decimal td;
+      decimal r;
+      decimal c;
+      int tf;
+      int i;
+
+      c = this.F[0, 4];
+      r = this.CalculateRange(0, 5); // range to midway
+      // adjust for midway (primary [KNOWN] target) considerations
+      if (r > 250)
+      {
+        // as long as range is over 250, point IJN carriers at midway
+        c = this.CourseTo(0, 5);
+      }
+      else if (r < 100)
+      {
+        // if we get within 100 miles with carriers, let's sail away -- we don't land carriers
+        c = this.CourseTo(5, 0);
+      }
+      td = 1000000m;
+      for (i = 6; i >= 4; --i) // go through us carriers
+      {
+        tf = (int)this.C[i, 0];
+        if (this.F[tf, 2] > 0) // is carrier seen?
+        {
+          if (this.C[i, 8] < 100) // is carrier still afloat?
+          {
+            // estimate range to 
+            r = this.CalculateRange(0, tf) * (1M + 0.3M * ((decimal)this.random.NextDouble()));
+            if (r < td)
+            {
+              c = this.CourseTo(0, tf);
+            }
+          }
+        }
+      }
+      if (this.j9)
+      {
+        c = 270;
+      }
+      this.F[0, 4] = c;
+    }
+
+    private void UpdateIJNCarrierCAPs()
+    {
+      int i;
+
+      for (i = 0; i < 3; ++i)
+      {
+        if (this.C[i, 7] != 5 && this.C[i, 8] >= 60)
+        {
+          this.C[i, 7] += this.C[i, 1];
+          this.C[i, 1] = 0;
+          if (this.C[i, 7] >= 5)
+          {
+            this.C[i, 1] = this.C[i, 7] - 5;
+            this.C[i, 7] = 5;
+          }
+          else
+          {
+            this.C[i, 7] += this.C[i, 4];
+            this.C[i, 4] = 0;
+            if (this.C[i, 7] > 5)
+            {
+              this.C[i, 4] = this.C[i, 7] - 5m;
+              this.C[i, 7] = 5m;
+            }
+          }
+        }
+      }
+    }
+
+    private void IJNCruisersBombardMidway()
+    {
+      decimal r;
+
       r = this.CalculateRange(2, 5);
       if (
         r <= 15 &&
@@ -1659,22 +1766,26 @@ namespace MidwayEngine
             h,
             n,
             false);
-          /*
-          this.d8 = 24;
-          if (this.C[7, 8] >= 100)
-          {
-            this.C[7, 0] = 0;
-            this.showOutcome = true;
-          }
-          else
-          {
-
-          }
-          */
         }
       }
+    }
 
-      this.taskForceUpdated?.Invoke();
+    private decimal CourseTo(int tfFrom, int tfTo)
+    {
+      decimal ret;
+      decimal x1;
+      decimal y1;
+      decimal x2;
+      decimal y2;
+
+      x1 = this.F[tfFrom, 0];
+      x2 = this.F[tfTo, 0];
+      y1 = this.F[tfFrom, 1];
+      y2 = this.F[tfTo, 1];
+      ret = this.arcTan(
+        x2 - x1,
+        y2 - y1);
+      return ret;
     }
 
     private void ApplyDamages(
