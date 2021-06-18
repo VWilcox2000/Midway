@@ -44,3 +44,10 @@
   font-weight: 600;
   color: black;
 }
+
+.MidwayContactsArea {
+  display: inline-flex;
+  width: calc(100% - 4px);
+  height: fit-content;
+  margin: 2px;
+}

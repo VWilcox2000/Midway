@@ -17,5 +17,25 @@ namespace MidwayEngine
     public decimal y { get; set; }
     public string? letter { get; set; }
     public bool visible { get; set; }
+    public bool isAllied
+    {
+      get
+      {
+        bool ret;
+
+        switch(this.type)
+        {
+          case ForceTypes.MidwayIsland:
+          case ForceTypes.TaskForce16:
+          case ForceTypes.TaskForce17:
+            ret = true;
+            break;
+          default:
+            ret = false;
+            break;
+        }
+        return ret;
+      }
+    }
   }
 }

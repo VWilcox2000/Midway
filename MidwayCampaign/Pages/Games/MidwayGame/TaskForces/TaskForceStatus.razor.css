@@ -27,6 +27,15 @@
   margin-left: 16px;
 }
 
+.taskForceSpottedText {
+  font-family: Calibri;
+  font-size: 22px;
+  font-weight: bold;
+  color: #ff6644;
+  margin-left: 16px;
+  transform: translate(0, -2px);
+}
+
 .taskForceBaseArea {
   left: 10px;
   width: calc(100% - 17px);

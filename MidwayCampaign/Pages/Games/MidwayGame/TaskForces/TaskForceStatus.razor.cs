@@ -78,6 +78,7 @@ namespace MidwayCampaign.Pages.Games.MidwayGame.TaskForces
     protected string taskForceSpeed => Convert.ToInt32((this.forceRef?.speed ?? 0M) + 0.5M) + " knots";
     protected string taskForceGridX => Convert.ToInt32(this.forceRef?.gridX ?? 0M).ToString();
     protected string taskForceGridY => Convert.ToInt32(this.forceRef?.gridY ?? 0M).ToString();
+    protected string taskForceSpotted => (this.forceRef?.visible == true && this.forceRef.type != ForceTypes.MidwayIsland) ? "Spotted" : "";
 
     protected string baseAreaColoring => (this.forceRef?.type == ForceTypes.MidwayIsland) ? "taskForceMidwayBaseArea" : "taskForceCarrierBaseArea";
 

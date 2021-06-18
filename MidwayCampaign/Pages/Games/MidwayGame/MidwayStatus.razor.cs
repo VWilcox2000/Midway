@@ -23,6 +23,15 @@ namespace MidwayCampaign.Pages.Games.MidwayGame
     protected override void OnInitialized()
     {
       base.OnInitialized();
+      this.midway!.taskForceUpdated += MidwayMapBase_taskForceUpdated;
+    }
+
+    private void MidwayMapBase_taskForceUpdated()
+    {
+      this.InvokeAsync(() =>
+      {
+        this.StateHasChanged();
+      });
     }
   }
 }

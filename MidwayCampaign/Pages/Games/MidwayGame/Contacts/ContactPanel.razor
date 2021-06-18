@@ -1,0 +1,20 @@
+﻿@namespace MidwayCampaign.Pages.Games.MidwayGame.Contacts
+@inherits ContactPanelBase
+ 
+@if (this.showThisContact)
+{
+  <div class="EnemyContactFrame">
+    <span class="EnemyContactNumberText">
+      @this.contactNumberText
+    </span>
+    <span class="EnemyContactName">
+      @this.contactName
+    </span>
+    <span class="EnemyContactBearing">
+      @this.contactBearing
+    </span>
+    <span class="EnemyContactRange">
+      @this.contactRange
+    </span>
+  </div>
+}

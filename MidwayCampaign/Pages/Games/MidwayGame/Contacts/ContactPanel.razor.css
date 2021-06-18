@@ -1,0 +1,54 @@
+﻿.EnemyContactFrame {
+  margin: 2px 6px;
+  padding: 3px 5px;
+  border-radius: 8px;
+  border: 2px solid black;
+  background-color: lightpink;
+  display: inline-grid;
+  grid-template-rows: auto auto;
+  grid-template-columns: auto auto;
+  grid-column-gap: 12px;
+  grid-row-gap: 0;
+}
+
+.EnemyContactNumberText {
+  grid-column-start: 1;
+  grid-column-end: 1;
+  grid-row-start: 1;
+  grid-row-end: 1;
+  font-family: Calibri;
+  font-size: 22px;
+  font-weight: bold;
+}
+
+.EnemyContactName {
+  grid-column-start: 2;
+  grid-column-end: 2;
+  grid-row-start: 1;
+  grid-row-end: 1;
+  font-family: Calibri;
+  font-size: 20px;
+  font-weight: normal;
+  text-align: right;
+}
+
+.EnemyContactBearing {
+  grid-column-start: 1;
+  grid-column-end: 1;
+  grid-row-start: 2;
+  grid-row-end: 2;
+  font-family: Calibri;
+  font-size: 20px;
+  font-weight: normal;
+}
+
+.EnemyContactRange {
+  grid-column-start: 2;
+  grid-column-end: 2;
+  grid-row-start: 2;
+  grid-row-end: 2;
+  font-family: Calibri;
+  font-size: 20px;
+  font-weight: normal;
+  text-align: right;
+}

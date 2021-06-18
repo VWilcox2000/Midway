@@ -14,11 +14,30 @@
   </div>
   @foreach (ForceRef force in this.midway!.forces)
   {
-    if (force.visible)
+    if (
+      force.visible ||
+      force.isAllied)
     {
-      <span class="forceText" style="@this.forceStyle(force)">
-        @force.letter
-      </span>
+      if (force.isAllied)
+      {
+        if (force.letter == "*")
+        {
+          <div class="USMidwayIsland" style="@this.forceStyle(force)">
+          </div>
+        }
+        else
+        {
+          <span class="USForceText" style="@this.forceStyle(force)">
+            @force.letter
+          </span>
+        }
+      }
+      else
+      {
+        <span class="JapaneseForceText" style="@this.forceStyle(force)">
+          @force.letter
+        </span>
+      }
     }
   }
 </div>

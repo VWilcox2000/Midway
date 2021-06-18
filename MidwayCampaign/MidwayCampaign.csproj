@@ -8,10 +8,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Pages\Games\MidwayGame\Contacts\ContactPanel.razor.css" />
     <None Remove="Pages\Games\MidwayGame\MidwayConsole.razor.css" />
     <None Remove="Pages\Games\MidwayGame\MidwayGamePage.razor.css" />
     <None Remove="Pages\Games\MidwayGame\MidwayMap.razor.css" />
     <None Remove="Pages\Games\MidwayGame\MidwayStatus.razor.css" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Pages\Games\MidwayGame\Contacts\ContactPanel.razor.css" />
   </ItemGroup>
 
   <ItemGroup>
