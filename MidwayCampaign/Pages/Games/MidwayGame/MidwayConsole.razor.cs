@@ -60,6 +60,7 @@ namespace MidwayCampaign.Pages.Games.MidwayGame
     {
       base.OnInitialized();
       this.midway!.outputText += Midway_outputText;
+      this.midway!.outputWord += MidwayConsoleBase_outputWord;
     }
 
     protected override void OnAfterRender(bool firstRender)
@@ -77,6 +78,15 @@ namespace MidwayCampaign.Pages.Games.MidwayGame
           this.logLineText,
           Environment.NewLine,
           message);
+    }
+
+    private void MidwayConsoleBase_outputWord(string message)
+    {
+      this.logLineText =
+        string.Concat(
+          this.logLineText,
+          message);
+      Task.Delay(250);
     }
 
     protected void onKeyPress(KeyboardEventArgs args)
