@@ -26,6 +26,7 @@ namespace MidwayEngine
     public MidwayScenario()
     {
       this.Initialize();
+      this.COriginal = (decimal[,])this.C.Clone();
     }
 
     public int day => this.d;
@@ -59,7 +60,7 @@ namespace MidwayEngine
     // F(x, 7) -- AA proficiency
     private decimal[,] F = new decimal[,]
     {
-      { 0M, 0M, 0M, 1M, 0M, 25M, 0.1M, 0.2M },
+      { 0M, 0M, 0M, 1M, 0M, 25M, 0.1M, 0.18M },  // reduce jap carrier group aa proficiency from 0.2 to 0.18 to be reasonable
       { 0M, 0M, 0M, 1M, 0M, 18M, 0.2M, 0.01M },
       { 0M, 0M, 0M, 1M, 0M, 25M, 0.1M, 0.01M },
       { 0M, 0M, 0M, 3M, 0M, 25M, 0.1M, 0.06M },
@@ -88,6 +89,7 @@ namespace MidwayEngine
       { 5, 14, 14, 10, 0, 0, 0, 0, 0, 0 },
       { 1, 15, 0, 15, 0, 0, 0, 0, 0, 0 }
     };
+    private decimal[,] COriginal;
     private decimal[] W = new decimal[]
     {
       1.5M, 1.4M, 1.3M, 1.3M, 1.2M, 1M
@@ -142,6 +144,55 @@ namespace MidwayEngine
     //[1, i / 2]
     //170 FOR I = 0 TO 9:S(I,9)=-1:NEXT:S6=.041:S7=.043:CLS:SCREEN 0:FOR X = 4 TO 7:LOCATE 12+X,1
 
+    public string[] usSubmarines = new string[]
+    {
+      "Albacore",
+      "Amberjack",
+      "Argonaut",
+      "Barbel",
+      "Bonefish",
+      "Bullhead",
+      "Capelin",
+      "Cisco",
+      "Corvina",
+      "Darter",
+      "Dorado",
+      "Escolar",
+      "Flier",
+      "Golet",
+      "Grampus",
+      "Grayback",
+      "Grayling",
+      "Grenadier",
+      "Growler",
+      "Grunion",
+      "Gudgeon",
+      "Harder",
+      "Herring",
+      "Kete",
+      "Lagarto",
+      "Nautilus",
+      "Perch",
+      "Pickerel",
+      "Pompano",
+      "Robalo",
+      "Runner",
+      "Scamp",
+      "Scorpion",
+      "Sculpin",
+      "Sealion",
+      "Seawolf",
+      "Shark",
+      "Snook",
+      "Swordfish",
+      "Tang",
+      "Trigger",
+      "Triton",
+      "Trout",
+      "Tullibee",
+      "Wahoo"
+    };
+
     private bool interruptTimeAdvancement = false; // not sure -- if 0 stop taking interaction and progress time until decision??
     // don't need -- we loop internal
     private bool allJapaneseCarriersIncapacitated; // all Japanese carriers lost? -- was j9
@@ -155,6 +206,7 @@ namespace MidwayEngine
     private int d; // day
     private decimal s6; // chance of Japanese scout plane sighting Americans
     private decimal s7; // chance of American scout planes sighting Japanese
+    private decimal s8; // chance of American sub reporting contact
     private string m { get; } = "12367M";
     private bool a8 = false; // IJN attack midway flag
     private bool a9 = false; // IJN attack fleet flag
@@ -420,8 +472,9 @@ namespace MidwayEngine
       {
         this.F[i, 4] = this.getHeading(i, 5);
       }
-      this.s6 = 0.041M;
-      this.s7 = 0.043M;
+      this.s6 = 0.031m; // original game had 0.041m, but Japanese scouting did not perform that well so reducing
+      this.s7 = 0.043m;
+      this.s8 = 0.005m;
       this.PlaceShips();
     }
 
@@ -1254,10 +1307,12 @@ namespace MidwayEngine
           break;
         }
       }
+      this.taskForceUpdated?.Invoke();
     }
 
     private void ProcessActivities()
     {
+      /*
       if (this.showJapaneseCarrierHealths)
       {
         this.outputText?.Invoke(
@@ -1268,6 +1323,7 @@ namespace MidwayEngine
             this.C[2, 8].ToString("0.0"),
             this.C[3, 8].ToString("0.0")));
       }
+      */
       this.interruptTimeAdvancement = false;
       this.SpotAnyVisualRangeForces();
       this.PrepareUSStrikes();
@@ -1298,7 +1354,18 @@ namespace MidwayEngine
       switch(i)
       {
         case 0:
-          ret = "IJN Carriers";
+          if (
+            this.C[0, 8] >= 100 &&
+            this.C[1, 8] >= 100 &&
+            this.C[2, 8] >= 100 &&
+            this.C[3, 8] >= 100)
+          {
+            ret = "Depleted IJN Carrier Group";
+          }
+          else
+          {
+            ret = "IJN Carrier Group";
+          }
           break;
         case 1:
           ret = "IJN Troop Transports";
@@ -1618,7 +1685,7 @@ namespace MidwayEngine
       //int i;
       //int p;
 
-      t1 = 30 + this.random.Next(0, 31);
+      t1 = 10 + this.random.Next(0, 11);
       this.t += t1;
       /* -- to proceed no input -- we handle differently
       if (
@@ -1705,11 +1772,14 @@ namespace MidwayEngine
 
     private void ProcessStrike(int si)
     {
+      decimal flightTime;
+      decimal planeCount;
       decimal odds;
       decimal bias;
       decimal dmg;
       decimal r;
       bool japanese;
+      bool waveMisses;
       //bool sunk;
       int count;
       int h;
@@ -1720,11 +1790,29 @@ namespace MidwayEngine
       japanese = this.S[si, 6] > 2;
       if (this.S[si, 6] != 5) // not attacking midway
       {
+        flightTime = Math.Abs(this.S[si, 8]) - Math.Abs(this.S[si, 7]);
+        planeCount = this.S[si, 0] + this.S[si, 2] + this.S[si, 4];
         for (i = 0; i <= 4; i += 2)
         {
+          // longer flight time = more chance of group missing
+          // more planes -- trying to coordinate launch -- more chance
+          if (japanese)
+          {
+            // Japanese were far more experienced at this point in the war in launching coordinated strikes while
+            // US was still using varied techniques from different carries and experimenting in general with far less
+            // experienced flight crew.  This changed dramatically after the battle and with more US carrier experience.
+            odds = (flightTime - 35) / 120m;
+            odds *= Math.Max(80, Math.Min(planeCount, 120)) / 120;
+            odds /= 2m;
+          }
+          else
+          {
+            odds = (flightTime - 20) / 110m;
+            odds *= Math.Max(40, Math.Min(planeCount, 70)) / 70;
+          }
           if (
             this.S[si, i] == 0 ||
-            ((decimal) this.random.NextDouble()) <= (this.S[i, 8] - this.S[i, 7] - 20) / 100m)
+            ((decimal) this.random.NextDouble()) <= odds)
           {
             this.S[si, i + 1] = -1;
           }
@@ -1989,7 +2077,9 @@ namespace MidwayEngine
           }
         }
       }
-      this.S[si, 9] = -1;
+      this.S[si, 1] = -1;
+      this.S[si, 3] = -1;
+      this.S[si, 5] = -1;
     }
 
     private bool StrikeWorthContinuing(int si)
@@ -2265,8 +2355,8 @@ namespace MidwayEngine
             attackingFighterCount == 1 ? "defends" : "defend",
             (int) this.S[si, capTarget],
             (this.S[si, capTarget] == 1) ?
-              this.plane[japanese ? 1 : 0, capTarget] :
-              this.planes[japanese ? 1 : 0, capTarget]));
+              this.plane[japanese ? 1 : 0, capTarget / 2] :
+              this.planes[japanese ? 1 : 0, capTarget / 2]));
       }
       // slight edge to zeroes on attacking non-fighters 1.4 to 1.3
       odds =
@@ -2344,8 +2434,8 @@ namespace MidwayEngine
               this.planes[japanese ? 1 : 0, 0],
             attackingFighterCount == 1 ? "attacks" : "attack",
             japanese ? "US" : "Japanese",
-            (int) this.S[si, capTarget],
-            (this.S[si, capTarget] == 1) ?
+            capCount,
+            (capCount == 1) ?
               this.plane[japanese ? 0 : 1, 0] :
               this.planes[japanese ? 0 : 1, 0]));
         odds =
@@ -2365,7 +2455,7 @@ namespace MidwayEngine
         }
         odds = Math.Min(0.8499999m, odds);
         attackingFighterVictories = 0;
-        for (i = 0; i < attackingFighterCount; ++i)
+        for (i = 0; i < capCount; ++i)
         {
           if (((decimal)this.random.NextDouble()) < odds)
           {
@@ -2547,6 +2637,7 @@ namespace MidwayEngine
 
     private void ProcessPBYScoutPlanes()
     {
+      bool spotHappened;
       int i;
 
       if (
@@ -2564,6 +2655,7 @@ namespace MidwayEngine
             {
               this.F[i, 5] = 2;
             }
+            spotHappened = false;
             if (
               this.F[i, 2] != 1 ||
               ((decimal)this.random.NextDouble()) < 3m * this.s7)
@@ -2581,8 +2673,10 @@ namespace MidwayEngine
                 {
                   case 1: // generic spot of something by japanese
                     this.outputText?.Invoke("PBY spots Japanese ships.");
+                    spotHappened = true;
                     break;
                   case 2:
+                    spotHappened = true;
                     switch (i)
                     {
                       case 0:
@@ -2596,6 +2690,57 @@ namespace MidwayEngine
                         break;
                     }
                     break;
+                }
+              }
+            }
+            if (!spotHappened)
+            {
+              if (
+                this.F[i, 2] != 1 ||
+                ((decimal)this.random.NextDouble()) < 3m * this.s8)
+              {
+                if (
+                  ((decimal)this.random.NextDouble()) <= p * this.s8 ||
+                  this.F[i, 2] != 0)
+                {
+                  string subName;
+
+                  this.F[i, 2] = Math.Min(this.F[i, 2] + 1, 2);
+                  if (((decimal)this.random.NextDouble()) > 3m * this.s8)
+                  {
+                    this.F[i, 2] = Math.Min(this.F[i, 2] + 1, 2);
+                  }
+                  subName = string.Concat(
+                    "USS ",
+                    this.usSubmarines[this.random.Next(this.usSubmarines.Length)]);
+                  switch (this.F[i, 2])
+                  {
+                    case 1: // generic spot of something by japanese
+                      this.output(
+                        "{0} reports sighting surface vessels.",
+                        subName);
+                      break;
+                    case 2:
+                      switch (i)
+                      {
+                        case 0:
+                          this.output(
+                            "{0} reports sighting a Japanese carrier group.",
+                            subName);
+                          break;
+                        case 1:
+                          this.output(
+                            "{0} reports sighting a Japanese troop transport group.",
+                            subName);
+                          break;
+                        case 2:
+                          this.output(
+                            "{0} reports sighting a Japanese cruiser group.",
+                            subName);
+                          break;
+                      }
+                      break;
+                  }
                 }
               }
             }
@@ -2663,7 +2808,14 @@ namespace MidwayEngine
           this.F[0, 3] = 2;
         }
         p = (this.t > 720 && this.t < 780) ? 2 : 1;
-        for (i = 3; i <= 4; ++i)
+        if (this.allJapaneseCarriersIncapacitated)
+        {
+          // less likely to be aggressively scouting as much as running
+          // Japanese did have 2 seaplane carriers with scout planes so
+          // not like they could NOT be searching, though.
+          p /= 2m;
+        }
+        for (i = 3; i <= 4; ++i) // tf 16 and 17
         {
           if (this.F[i, 2] < 2)
           {
@@ -3229,9 +3381,10 @@ namespace MidwayEngine
           if (japanese)
           {
             this.output(
-              "{0} of {1}'s planes were rendered inoperable.",
+              "{0} of {1}'s planes {2} rendered inoperable.",
               planesDestroyed,
-              this.vessels[vessel]);
+              this.vessels[vessel],
+              (planesDestroyed == 1) ? "was" : "were");
           }
           else
           {
@@ -3698,64 +3851,391 @@ namespace MidwayEngine
 
     private void LandJapaneseStrike(int si)
     {
-      int c;
+      Func<int[]> fnOptions;
+      List<int> carriers;
+      int[] planes;
+      int[] options;
+      int i;
 
-      c = (int) this.S[si, 9];
-      if (this.C[c, 8] <= 60m)
+      carriers = new List<int>();
+      fnOptions = () =>
       {
-        this.output(
-          "Strike landing on {0}.",
-          this.vessels[c]);
-        this.C[c, 1] += this.S[si, 0];
-        this.C[c, 2] += this.S[si, 2];
-        this.C[c, 3] += this.S[si, 4];
-      }
-      else
+        return carriers
+          .OrderBy(
+            c =>
+              this.random.NextDouble())
+          .ToArray();
+      };
+      planes = new int[]
       {
-        // divert or splash
+        0,
+        (int) this.S[si, 0],
+        (int) this.S[si, 2],
+        (int) this.S[si, 4]
+      };
+      for (i = 0; i < 4; ++i)
+      {
+        if (this.C[i, 8] <= 60)
+        {
+          carriers.Add(i);
+        }
       }
-      /*
-      2630 L=0:FOR I=0 TO 3:GOSUB 3120:L=L-(C(I,8)<=60):NEXT:IF L=0 THEN 2700
-      2640 FOR K=0 TO 4 STEP 2:M=-1:FOR I=1 TO L
-      2650 M=M+1:IF C(M,8)>=60 THEN 2650
-      2660 C(M,1+K/2)=C(M,1+K/2)+INT((L+S(J,K)-I)/L):NEXT I,K:FOR I=0 TO 3
-      2670 IF C(I,1)+C(I,2)+C(I,3)<96 THEN 2690
-      2680 FOR K=1 TO 3:C(I,K)=C(I,K)+(C(I,K)>0):NEXT:GOTO 2670
-      2690 NEXT
-      */
+      if (carriers.Any())
+      {
+        int count;
+        int p;
+
+        for (p = 1; p <= 3; ++p)
+        {
+          count = planes[p];
+          for (i = 0; i < count; ++i)
+          {
+            options = fnOptions();
+            foreach (int j in options)
+            {
+              // do we have space for the plane -- capacity beyond the current armed/hangar of the type?
+              if (this.C[j, p] + this.C[j, p + 3] < (this.COriginal[j, p] + this.COriginal[j, p + 3]))
+              {
+                // then park the plane in the hanger and remove it from plane count looking for landing
+                ++this.C[j, p];
+                --planes[p];
+                break;
+              }
+            }
+          }
+        }
+      }
     }
 
     private void LandAmericanStrike(int si)
     {
+      int planesLeft;
       int c;
 
       c = (int)this.S[si, 9];
-      if (this.C[c, 8] <= 60m)
+      planesLeft =
+        (int) 
+          (this.S[si, 0] +
+          this.S[si, 2] +
+          this.S[si, 4]);
+      if (planesLeft > 0)
       {
-        this.output(
-          "Strike landing on {0}.",
-          this.vessels[c]);
-        this.C[c, 1] += this.S[si, 0];
-        this.C[c, 2] += this.S[si, 2];
-        this.C[c, 3] += this.S[si, 4];
+        if (this.C[c, 8] <= 60m)
+        {
+          this.output(
+            "Strike landing on {0}.",
+            this.vessels[c]);
+          this.C[c, 1] += this.S[si, 0];
+          this.C[c, 2] += this.S[si, 2];
+          this.C[c, 3] += this.S[si, 4];
+        }
+        else
+        {
+          SortedSet<int> carriersUsed;
+          List<int> carriersTo;
+          decimal lossPct;
+
+          lossPct = 0m;
+          carriersTo = new List<int>();
+          carriersUsed = new SortedSet<int>();
+          if (
+            c == 4 &&
+            this.C[5, 8] <= 60)
+          {
+            // divert to hornet
+            carriersTo.Add(5);
+          }
+          else if (
+            c == 5 &&
+            this.C[4, 8] <= 60)
+          {
+            // divert to Enterprise
+            carriersTo.Add(4);
+          }
+          else
+          {
+            List<int> tfOptions;
+            int sourceTF;
+            decimal r;
+            int i;
+            int j;
+
+            sourceTF = (int)this.C[c, 0];
+            tfOptions = new List<int>();
+            for (i = 3; i <= 5; ++i)
+            {
+              if (i != sourceTF)
+              {
+                tfOptions.Add(i);
+              }
+            }
+            tfOptions = tfOptions
+              .OrderBy(
+                o =>
+                  this.random.NextDouble())
+              .ToList();
+            foreach (int tfOption in tfOptions)
+            {
+              r = this.CalculateRange(sourceTF, tfOption);
+              if (r / 100m < (0.15m + 0.85m * ((decimal)this.random.NextDouble())))
+              {
+                lossPct = r / 100m;
+                for (j = 4; j <= 7; ++j)
+                {
+                  if (
+                    this.C[j, 0] == tfOption &&
+                    this.C[j, 8] <= 60m)
+                  {
+                    carriersTo.Add(j);
+                  }
+                }
+                if (carriersTo.Any())
+                {
+                  break;
+                }
+              }
+            }
+          }
+          if (carriersTo.Any())
+          {
+            int planesLost;
+
+            planesLost = 0;
+            this.ProcessStrikeDiversion(
+              carriersTo,
+              (int)this.S[si, 0],
+              (int)this.S[si, 2],
+              (int)this.S[si, 4],
+              lossPct,
+              ref carriersUsed,
+              ref planesLost);
+            if (carriersUsed.Any())
+            {
+              this.output(
+                "{0}'s strike is diverted to {1}.",
+                this.vessels[c],
+                this.vesselList(carriersUsed));
+            }
+            else
+            {
+              this.output(
+                "{0}'s strike splashes attempting to divert to {1}.",
+                this.vessels[c],
+                this.vesselList(carriersTo));
+            }
+            this.output(
+              "{0} of {1}'s strike planes are lost.",
+              planesLost,
+              this.vessels[c]);
+          }
+          else
+          {
+            this.output(
+              "{0}'s strike force of {1} {2} splashes!",
+              this.vessels[c],
+              planesLeft,
+              this.strikePlaneTypesList(
+                false,
+                this.S[si, 0] > 0,
+                this.S[si, 2] > 0,
+                this.S[si, 4] > 0));
+          }
+        }
       }
       else
       {
-        // divert or splash
+        this.output(
+          "None of {0}'s strike force survived to return home.",
+          this.vessels[c]);
       }
-      /*
-      2530 F9=1:I=S(J,9):IF C(I,8)>60 THEN 2560
-      2540 PRINT "STRIKE LANDING ON ";:X=I:GOSUB 3810:PRINT ".":GOSUB 3120:C(I,1)=C(I,1)+S(J,0)
-      2550 C(I,2)=C(I,2)+S(J,2):C(I,3)=C(I,3)+S(J,4):GOSUB 3910:GOTO 2700
+    }
 
-      2560 IF I>5 OR (C(4,8)>60 AND C(5,8)>60) THEN K=3:GOTO 2580
-      2570 K=4-(I=4):GOTO 2620
-      2580 K=K+1:IF C(K,8)>60 THEN 2600
-      2590 X=C(I,0):Y=C(K,0):GOSUB 3490:IF R/100<RND THEN 2620
-      2600 IF K<7 THEN 2580
-      2610 X=I:GOSUB 3810:PRINT " STRIKE SPLASHES!":X=300:GOSUB 4000:GOSUB 3790:GOTO 2700
-      2620 X=I:GOSUB 3810:PRINT " STRIKE DIVERTED TO ";:I=K:X=I:GOSUB 3810:PRINT:GOTO 2540
-      */
+    private string vesselList(IEnumerable<int> vessels)
+    {
+      List<string> names;
+      string ret;
+
+      names = new List<string>();
+      foreach (int v in vessels)
+      {
+        names.Add(this.vessels[v]);
+      }
+      ret = this.wordList(
+        names
+          .OrderBy(
+            n =>
+              n));
+      return ret;
+    }
+
+    private string wordList(IEnumerable<string> words)
+    {
+      StringBuilder sb;
+      string ret;
+      int count;
+      int i;
+
+      sb = new StringBuilder();
+      count = words.Count();
+      for (i = 0; i < count; ++i)
+      {
+        if (i == count - 1)
+        {
+          sb.Append(", and ");
+        }
+        else if (i > 0)
+        {
+          sb.Append(", ");
+        }
+        sb.Append(words.ElementAt(i));
+      }
+      ret = sb.ToString();
+      return ret;
+    }
+
+    private string strikePlaneTypesList(
+      bool japanese,
+      bool fighters,
+      bool bombers,
+      bool torpedoBombers)
+    {
+      List<string> names;
+      string ret;
+
+      names = new List<string>();
+      if (fighters)
+      {
+        names.Add("fighters");
+      }
+      if (bombers)
+      {
+        names.Add("bombers");
+      }
+      if (torpedoBombers)
+      {
+        names.Add("torpedo bombers");
+      }
+      ret = this.wordList(names);
+      return ret;
+    }
+
+    private void ProcessStrikeDiversion(
+      IEnumerable<int> carriersTo,
+      int fighters,
+      int bombers,
+      int torpedoBombers,
+      decimal lossPct,
+      ref SortedSet<int> carriersUsed,
+      ref int planesLost)
+    {
+      this.ProcessStrikeDiversion(
+        carriersTo,
+        0,
+        fighters,
+        lossPct,
+        ref carriersUsed,
+        ref planesLost);
+      this.ProcessStrikeDiversion(
+        carriersTo,
+        1,
+        bombers,
+        lossPct,
+        ref carriersUsed,
+        ref planesLost);
+      this.ProcessStrikeDiversion(
+        carriersTo,
+        2,
+        torpedoBombers,
+        lossPct,
+        ref carriersUsed,
+        ref planesLost);
+    }
+
+    private void ProcessStrikeDiversion(
+      IEnumerable<int> carriersTo,
+      int planeType,
+      int planeCount,
+      decimal lossPct,
+      ref SortedSet<int> carriersUsed,
+      ref int planesLost)
+    {
+      if (planeCount > 0)
+      {
+        Dictionary<int, int> optionSlots;
+        int optionIndex;
+        int slotsLeft;
+        int carrierId;
+        int i;
+
+        optionSlots = new Dictionary<int, int>();
+        foreach (int cid in carriersTo)
+        {
+          slotsLeft =
+            Math.Max(
+              0,
+              (int) ((this.COriginal[cid, planeType + 1] + (this.COriginal[cid, planeType + 4]) * 5m / 4m) -
+              (int) (this.C[cid, planeType + 1] + this.C[cid, planeType + 4])));
+          optionSlots[cid] = slotsLeft;
+        }
+        for (i = 0; i < planeCount; ++i)
+        {
+          if (((decimal)this.random.NextDouble()) < lossPct)
+          {
+            ++planesLost;
+          }
+          else
+          {
+            optionIndex = this.PickCarrierOption(ref optionSlots);
+            if (optionIndex >= 0)
+            {
+              carrierId = optionSlots.ElementAt(optionIndex).Key;
+              optionSlots[carrierId] -= 1;
+              if (!carriersUsed.Contains(carrierId))
+              {
+                carriersUsed.Add(carrierId);
+              }
+              ++this.C[carrierId, planeType + 1];
+            }
+            else
+            {
+              ++planesLost;
+            }
+          }
+        }
+      }
+    }
+
+    private int PickCarrierOption(
+      ref Dictionary<int, int> options)
+    {
+      int total;
+      int index;
+      int ret;
+      int r;
+
+      total = 0;
+      foreach (int slotCount in options.Values)
+      {
+        total += slotCount;
+      }
+      r = this.random.Next(total);
+      total = 0;
+      ret = -1;
+      index = 0;
+      foreach (int slotCount in options.Values)
+      {
+        total += slotCount;
+        if (r < total)
+        {
+          ret = index;
+          break;
+        }
+        else
+        {
+          ++index;
+        }
+      }
+      return ret;
     }
 
     private void ProcessDamageControl()
