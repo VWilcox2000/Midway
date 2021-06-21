@@ -23,7 +23,43 @@ namespace MidwayCampaign.Pages.Games.MidwayGame
     protected override void OnInitialized()
     {
       base.OnInitialized();
-      this.midway!.taskForceUpdated += MidwayMapBase_taskForceUpdated;
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+      base.OnAfterRender(firstRender);
+      this.midwayWatching = this.midway;
+    }
+
+    private MidwayScenario? _midwayWatching = null;
+    private MidwayScenario? midwayWatching
+    {
+      get => this._midwayWatching;
+      set
+      {
+        if (this._midwayWatching != value)
+        {
+          if (this._midwayWatching != null)
+          {
+            this._midwayWatching.taskForceUpdated -= MidwayMapBase_taskForceUpdated;
+            this._midwayWatching.endingActivitiies -= MidwayStatusBase_endingActivitiies;
+          }
+          this._midwayWatching = value;
+          if (this._midwayWatching != null)
+          {
+            this._midwayWatching.taskForceUpdated += MidwayMapBase_taskForceUpdated;
+            this._midwayWatching.endingActivitiies += MidwayStatusBase_endingActivitiies;
+          }
+        }
+      }
+    }
+
+    private void MidwayStatusBase_endingActivitiies()
+    {
+      this.InvokeAsync(() =>
+      {
+        this.StateHasChanged();
+      });
     }
 
     private void MidwayMapBase_taskForceUpdated()

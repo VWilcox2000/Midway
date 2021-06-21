@@ -30,6 +30,7 @@
   z-index: 1;
   transform: translate(-50%, -50%);
   position: absolute;
+  user-select: none;
 }
 
 .JapaneseForceText {
@@ -41,6 +42,7 @@
   z-index: 2;
   transform: translate(-50%, -50%);
   position: absolute;
+  user-select: none;
 }
 
 .USMidwayIsland {

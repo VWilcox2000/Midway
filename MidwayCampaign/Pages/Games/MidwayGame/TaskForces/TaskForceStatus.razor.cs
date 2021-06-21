@@ -78,7 +78,7 @@ namespace MidwayCampaign.Pages.Games.MidwayGame.TaskForces
     protected string taskForceSpeed => Convert.ToInt32((this.forceRef?.speed ?? 0M) + 0.5M) + " knots";
     protected string taskForceGridX => Convert.ToInt32(this.forceRef?.gridX ?? 0M).ToString();
     protected string taskForceGridY => Convert.ToInt32(this.forceRef?.gridY ?? 0M).ToString();
-    protected string taskForceSpotted => (this.forceRef?.visible == true && this.forceRef.type != ForceTypes.MidwayIsland) ? "Spotted" : "";
+    protected string taskForceSpotted => (this.forceRef?.visible == true && this.forceRef?.type != ForceTypes.MidwayIsland) ? "Spotted" : "";
 
     protected string baseAreaColoring => (this.forceRef?.type == ForceTypes.MidwayIsland) ? "taskForceMidwayBaseArea" : "taskForceCarrierBaseArea";
 
@@ -121,7 +121,38 @@ namespace MidwayCampaign.Pages.Games.MidwayGame.TaskForces
     protected override void OnAfterRender(bool firstRender)
     {
       base.OnAfterRender(firstRender);
-      this.midway!.taskForceUpdated += TaskForceStatusBase_taskForceUpdated;
+      this.midwayWatching = this.midway;
+    }
+
+    private MidwayScenario? _midwayWatching = null;
+    private MidwayScenario? midwayWatching
+    {
+      get => this._midwayWatching;
+      set
+      {
+        if (this._midwayWatching != value)
+        {
+          if (this._midwayWatching != null)
+          {
+            this._midwayWatching.taskForceUpdated -= TaskForceStatusBase_taskForceUpdated;
+            this._midwayWatching.endingActivitiies -= TaskForceStatusBase_endingActivitiies;
+          }
+          this._midwayWatching = value;
+          if (this._midwayWatching != null)
+          {
+            this._midwayWatching.taskForceUpdated += TaskForceStatusBase_taskForceUpdated;
+            this._midwayWatching.endingActivitiies += TaskForceStatusBase_endingActivitiies;
+          }
+        }
+      }
+    }
+
+    private void TaskForceStatusBase_endingActivitiies()
+    {
+      this.InvokeAsync(() =>
+      {
+        this.StateHasChanged();
+      });
     }
 
     private void TaskForceStatusBase_taskForceUpdated()

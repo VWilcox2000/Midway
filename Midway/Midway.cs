@@ -11,17 +11,60 @@ namespace MidwayEngine
 {
   public delegate void OutputTextHandler(string message);
   public delegate void TaskForceUpdatedHandler();
+  public delegate void PlayAgainHandler();
+  public delegate void GameOverHandler();
+  public delegate void StartingActivitiesHandler();
+  public delegate void EndingActivitiesHandler();
+  public delegate void StrikeStatusChangedHandler();
 
   public sealed class MidwayScenario
   {
     private bool showJapaneseLaunches = true; // for testing
     private bool showJapaneseCarrierHealths = true; // for testing
+    private bool japaneseHaveLaunchedFirstMidwayRaid = false;
+    private bool mentionedThachWeave = false;
+    private bool _gameOver = false;
+    public bool gameOver
+    {
+      get => this._gameOver;
+      set
+      {
+        if (this._gameOver != value)
+        {
+          this._gameOver = value;
+          if (this._gameOver == true)
+          {
+            gameNowOver?.Invoke();
+          }
+        }
+      }
+    }
 
     private List<RecoveringCAP> recoveringCAPs { get; } = new List<RecoveringCAP>();
 
     public event OutputTextHandler? outputText;
     public event OutputTextHandler? outputWord;
     public event TaskForceUpdatedHandler? taskForceUpdated;
+    public event PlayAgainHandler? playAgain;
+    public event GameOverHandler? gameNowOver;
+    public event StartingActivitiesHandler? startingActivities;
+    public event EndingActivitiesHandler? endingActivitiies;
+    public event StrikeStatusChangedHandler? strikeHappeningChanged;
+    public bool activitiesHappening { get; private set; } = false;
+
+    private bool _strikeHappening = false;
+    public bool strikeHappening
+    {
+      get => this._strikeHappening;
+      set
+      {
+        if (this._strikeHappening != value)
+        {
+          this._strikeHappening = value;
+          this.strikeHappeningChanged?.Invoke();
+        }
+      }
+    }
 
     public MidwayScenario()
     {
@@ -29,7 +72,6 @@ namespace MidwayEngine
       this.COriginal = (decimal[,])this.C.Clone();
     }
 
-    public int day => this.d;
     public string dateText => string.Concat(
       this.day,
       " June 1942");
@@ -40,7 +82,7 @@ namespace MidwayEngine
         TimeSpan ts;
         string ret;
 
-        ts = TimeSpan.FromMinutes(t);
+        ts = TimeSpan.FromMinutes(this.time);
         ret = string.Concat(
           (Convert.ToInt32(ts.TotalHours) % 24).ToString("00"),
           ':',
@@ -106,18 +148,19 @@ namespace MidwayEngine
     // S[i, 7] - target arrival time
     // S[i, 8] - landing time
     // S[i, 9] - strike home carrier (or seems TF?!??)
+    // S[i, 10] - 0 - not reported, 1 - reported approaching on radar (added new to this version)
     private decimal[,] S = new decimal[,]
     {
-      { 0, 0, 0, 0, 0, 0, 0, 0, 0, -1 },
-      { 0, 0, 0, 0, 0, 0, 0, 0, 0, -1 },
-      { 0, 0, 0, 0, 0, 0, 0, 0, 0, -1 },
-      { 0, 0, 0, 0, 0, 0, 0, 0, 0, -1 },
-      { 0, 0, 0, 0, 0, 0, 0, 0, 0, -1 },
-      { 0, 0, 0, 0, 0, 0, 0, 0, 0, -1 },
-      { 0, 0, 0, 0, 0, 0, 0, 0, 0, -1 },
-      { 0, 0, 0, 0, 0, 0, 0, 0, 0, -1 },
-      { 0, 0, 0, 0, 0, 0, 0, 0, 0, -1 },
-      { 0, 0, 0, 0, 0, 0, 0, 0, 0, -1 }
+      { 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0 },
+      { 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0 },
+      { 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0 },
+      { 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0 },
+      { 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0 },
+      { 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0 },
+      { 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0 },
+      { 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0 },
+      { 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0 },
+      { 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0 }
     };
     private string[] vessels =
     {
@@ -143,6 +186,18 @@ namespace MidwayEngine
     };
     //[1, i / 2]
     //170 FOR I = 0 TO 9:S(I,9)=-1:NEXT:S6=.041:S7=.043:CLS:SCREEN 0:FOR X = 4 TO 7:LOCATE 12+X,1
+    private bool[] armedForGroundAttack =
+    {
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    };
 
     public string[] usSubmarines = new string[]
     {
@@ -195,22 +250,21 @@ namespace MidwayEngine
 
     private bool interruptTimeAdvancement = false; // not sure -- if 0 stop taking interaction and progress time until decision??
     // don't need -- we loop internal
-    private bool allJapaneseCarriersIncapacitated; // all Japanese carriers lost? -- was j9
-    private int v0; // victory points?
-    private int v1; // victory points?
-    private int v2; // victory points?
-    private int v; // victor points standing
-    private decimal p1; // japanese planes lost
-    private decimal p; // american planes lost
-    private int t; // time 0-hour
-    private int d; // day
-    private decimal s6; // chance of Japanese scout plane sighting Americans
-    private decimal s7; // chance of American scout planes sighting Japanese
-    private decimal s8; // chance of American sub reporting contact
+    private bool allJapaneseCarriersIncapacitated = false; // all Japanese carriers lost? -- was j9
+    private bool noJapaneseCarrierStrikePlanes = false; // new -- no planes for japanese?  so we can end game
+    private bool japaneseKnowAmericaCarriersInArea = false;
+    private int victoryPointsUS; // US victory points (was v0)
+    private int victoryPointsJapan; // Japanese victory points (was v1)
+    //private decimal p1; // was used to do angle calculations, our functions do this for us so no need
+    private int time; // time 0-hour
+    public int day { get; private set; }
+    private decimal oddsOfJapaneseScoutPlaneMakingSighting; // chance of Japanese scout plane sighting Americans (was s6)
+    private decimal oddsOfAmericanScoutPlaneMakingSighting; // chance of American scout planes sighting Japanese (was s7)
+    private decimal oddsOfAmericanSubMakingSighting; // chance of American sub reporting contact (new to this version)
     private string m { get; } = "12367M";
-    private bool a8 = false; // IJN attack midway flag
-    private bool a9 = false; // IJN attack fleet flag
-    private int s9 = 0; // IJN attack target task force
+    private bool kidoButaiTarget_Midway = false; // IJN attack midway flag (was a8)
+    private bool kidoButaiTarget_EnemyCarriers = false; // IJN attack fleet flag (was a9)
+    private int japaneseCarrierFleetTarget = 0; // IJN attack target task force
     private ForceTypes[] forceTypes { get; } =
     {
       ForceTypes.JapaneseCarrierGroup,
@@ -229,14 +283,14 @@ namespace MidwayEngine
       { 25, 20, 380 },
       { 0, 0, 0 }
     };
-    private int c5;
+    private int cruiserGroupLosses; // was c5 (10 is when they stop bombarding or seeking to support)
     private bool firstCruiserAttack; // was c6
-    private int c7;
+    private int cruiserGroupDamages; // was c7 -- changed with victory points
     private decimal[] FX = { 0, 0, 0, 0, 0, 0 }; // x on map
     private decimal[] FY = { 0, 0, 0, 0, 0, 0 }; // y on map
     private bool[] FZ = { false, false, false, false, false, false };  // spotted by opponent
     private int[] C1 = { 0, 0, 0 };
-    private bool showOutcome = false;
+    //private bool showOutcome = false;
 
     private int rand(int max)
     {
@@ -349,6 +403,22 @@ namespace MidwayEngine
       return ret;
     }
 
+    public IEnumerable<AirBaseRef> airBaseRefs
+    {
+      get
+      {
+        yield return this.getAirBaseRef(AirBases.Akagi);
+        yield return this.getAirBaseRef(AirBases.Kaga);
+        yield return this.getAirBaseRef(AirBases.Soryu);
+        yield return this.getAirBaseRef(AirBases.Hiryu);
+        yield return this.getAirBaseRef(AirBases.Zuiho);
+        yield return this.getAirBaseRef(AirBases.Enterprise);
+        yield return this.getAirBaseRef(AirBases.Hornet);
+        yield return this.getAirBaseRef(AirBases.Yorktown);
+        yield return this.getAirBaseRef(AirBases.Midway);
+      }
+    }
+
     public AirBaseRef getAirBaseRef(AirBases airBase)
     {
       AirBaseRef ret;
@@ -395,13 +465,15 @@ namespace MidwayEngine
         cap = (int)this.C[index, 7]
       };
       ret.armed.f4fs = (int) this.C[index, 4];
-      ret.armed.sbds = (int) this.C[index, 5];
+      ret.armed.sbds = (int) this.C[index, 5] % 10000;
       Debug.Assert((ret.armed.sbds % 1000) < 300);
       ret.armed.tbds = (int) this.C[index, 6];
       ret.below.f4fs = (int)this.C[index, 1];
       ret.below.sbds = (int)this.C[index, 2];
       ret.below.tbds = (int)this.C[index, 3];
       ret.damage = this.C[index, 8];
+      ret.escort = index == 8;
+      ret.landBase = index == 7;
       return ret;
     }
 
@@ -420,18 +492,18 @@ namespace MidwayEngine
       Console.Out.WriteLine(this.arcTan(-1, 1));
       */
       this.allJapaneseCarriersIncapacitated = false;
-      this.v0 = 0;
-      this.v1 = 0;
-      this.p1 = 1M; // 0.017453293M;
-      this.t = 720;
-      this.d = 3;
+      this.noJapaneseCarrierStrikePlanes = false;
+      this.victoryPointsUS = 0;
+      this.victoryPointsJapan = 0;
+      this.time = 720;
+      this.day = 3;
       for (i = 0; i <= 5; ++i)
       {
         j = this.initArray[i, 0];
         k = this.initArray[i, 1];
         l = this.initArray[i, 2];
         l += this.rand(175) - this.rand(200) * mVal(i < 3);
-        j = (j + this.rand(k)) * p1;
+        j = (j + this.rand(k));
         this.F[i, 0] = 850.0M - l * cos(j) * mVal(i != 5);
         this.F[i, 1] = 450.0M - l * sin(j) * mVal(i != 5);
         if (i >= 3)
@@ -445,19 +517,19 @@ namespace MidwayEngine
             this.F[i, 1] = 1149M;
           }
         }
-        j = j + 180M * this.p1 + 360M * p1 * mVal(j > 180 * p1);
+        j = j + 180M + 360M * mVal(j > 180);
         if (i < 3)
         {
           this.F[i, 4] = j;
         }
         else
         {
-          this.F[i, 4] = 205M * p1 * (-mVal(i != 5));
+          this.F[i, 4] = 205M * (-mVal(i != 5));
         }
       }
-      this.c7 = 0;
+      this.cruiserGroupDamages = 0;
       this.firstCruiserAttack = true;
-      this.c5 = 0;
+      this.cruiserGroupLosses = 0;
       this.C[8, 7] = this.C[8, 1];
       this.C[8, 1] = 0;
       for (i = 4; i <= 7; ++i)
@@ -472,9 +544,11 @@ namespace MidwayEngine
       {
         this.F[i, 4] = this.getHeading(i, 5);
       }
-      this.s6 = 0.031m; // original game had 0.041m, but Japanese scouting did not perform that well so reducing
-      this.s7 = 0.043m;
-      this.s8 = 0.005m;
+      // original game had 0.041m for Japanese scouting did not perform that well so reducing
+      // dividing all by 3m since shortening minimal time advancement from 30+r30 to 10 +r10
+      this.oddsOfJapaneseScoutPlaneMakingSighting = 0.039m / 3m;
+      this.oddsOfAmericanScoutPlaneMakingSighting = 0.043m / 3m;
+      this.oddsOfAmericanSubMakingSighting = 0.005m / 3m;
       this.PlaceShips();
     }
 
@@ -490,18 +564,18 @@ namespace MidwayEngine
       x = a;
       if (y == 0)
       {
-        a = (90 - 180 * intVal(x < 0)) * this.p1;
+        a = (90 - 180 * intVal(x < 0));
       }
       else
       {
         a = this.arcTan(x, y);
         if (y > 0)
         {
-          a = a - 360M * this.p1 * mVal(a < 0M);
+          a = a - 360M * mVal(a < 0M);
         }
         else
         {
-          a = a + 180M * this.p1;
+          a = a + 180M;
         }
       }
       return a;
@@ -587,337 +661,366 @@ namespace MidwayEngine
 
     public void ProcessCommand (string command)
     {
-      string carrier;
-      string[] parts;
-      bool good;
-
-      parts = command
-        .Split(' ')
-        .Where(
-          p =>
-            !string.IsNullOrWhiteSpace(p))
-        .Select(
-          p =>
-            p.ToLower())
-        .ToArray();
-      good = false;
-      switch (parts.ElementAtOrDefault(0))
+      if (!this.activitiesHappening)
       {
-        case "?":
-          this.output(
-            "{0} course IJNCV to Midway",
-            this.CourseTo(0, 5));
-          this.output(
-            "{0} course Midway to IJNCV",
-            this.CourseTo(5, 0));
-          this.output(
-            "{0} course TF-16 to IJNCV",
-            this.CourseTo(3, 0));
-          this.output(
-            "{0} course IJNCV to TF-16",
-            this.CourseTo(0, 3));
-          this.output(
-            "{0} course TF-17 to IJNCV",
-            this.CourseTo(4, 0));
-          this.output(
-            "{0} course IJNCV to TF-17",
-            this.CourseTo(0, 4));
-          break;
-        case "0":
-          this.AdvanceTime(0);
-          good = true;
-          break;
-        case "1":
-          this.AdvanceTime(1);
-          good = true;
-          break;
-        case "2":
-          this.AdvanceTime(2);
-          good = true;
-          break;
-        case "3":
-          this.AdvanceTime(3);
-          good = true;
-          break;
-        case "4":
-          this.AdvanceTime(4);
-          good = true;
-          break;
-        case "5":
-          this.AdvanceTime(5);
-          good = true;
-          break;
-        case "6":
-          this.AdvanceTime(6);
-          good = true;
-          break;
-        case "7":
-          this.AdvanceTime(7);
-          good = true;
-          break;
-        case "8":
-          this.AdvanceTime(8);
-          good = true;
-          break;
-        case "9":
-          this.AdvanceTime(9);
-          good = true;
-          break;
-        case "t":
-          if (parts.Length ==3)
+        if (!this.gameOver)
+        {
+          string carrier;
+          string[] parts;
+          bool good;
+
+          parts = command
+            .Split(' ')
+            .Where(
+              p =>
+                !string.IsNullOrWhiteSpace(p))
+            .Select(
+              p =>
+                p.ToLower())
+            .ToArray();
+          good = false;
+          switch (parts.ElementAtOrDefault(0))
           {
-            decimal course;
-
-            decimal.TryParse(
-              parts[2],
-              out course);
-            if (
-              course >= 0M &&
-              course <= 360M)
-            {
-              switch (parts[1])
-              {
-                case "6":
-                case "16":
-                  this.F[3, 4] = course * this.p1;
-                  this.output(
-                    "TF-16 new course {0}°",
-                    this.F[3, 4]);
-                  good = true;
-                  this.taskForceUpdated?.Invoke();
-                  break;
-                case "7":
-                case "17":
-                  this.F[4, 4] = course * this.p1;
-                  this.output(
-                    "TF-17 new course {0}°",
-                    this.F[4,4]);
-                  good = true;
-                  this.taskForceUpdated?.Invoke();
-                  break;
-              }
-            }
-          }
-          break;
-        case "s":
-          if (parts.Length == 3)
-          {
-            decimal speed;
-
-            decimal.TryParse(
-              parts[2],
-              out speed);
-            speed = Math.Max(0, Math.Min(speed, 26));
-            switch (parts[1])
-            {
-              case "6":
-              case "16":
-                this.F[3, 5] = speed;
-                this.output(
-                  "TF-16 new speed {0} knots",
-                  this.F[3, 5]);
-                good = true;
-                this.taskForceUpdated?.Invoke();
-                break;
-              case "7":
-              case "17":
-                this.F[4, 5] = speed;
-                this.output(
-                  "TF-17 new speed {0} knots",
-                  this.F[4, 5]);
-                good = true;
-                this.taskForceUpdated?.Invoke();
-                break;
-            }
-          }
-          break;
-        case "a":
-          if (parts.Length == 5)
-          {
-            int f4fs;
-            int sbds;
-            int tbds;
-
-            carrier = parts[1];
-            if (
-              int.TryParse(
-                parts[2],
-                out f4fs) &&
-              int.TryParse(
-                parts[3],
-                out sbds) &&
-              int.TryParse(
-                parts[4],
-                out tbds))
-            {
-              int c;
-
-              switch(carrier)
-              {
-                case "e":
-                  c = 4;
-                  break;
-                case "h":
-                  c = 5;
-                  break;
-                case "y":
-                  c = 6;
-                  break;
-                case "m":
-                  c = 7;
-                  break;
-                default:
-                  c = -1;
-                  break;
-              }
-              if (c > -1)
-              {
-                this.ArmStrike(
-                  c,
-                  f4fs,
-                  sbds,
-                  tbds);
-                good = true;
-                this.taskForceUpdated?.Invoke();
-              }
-            }
-          }
-          break;
-        case "l":
-          if (
-            parts.Length == 2 ||
-            parts.Length == 3)
-          {
-            carrier = parts[1];
-            int c;
-
-            switch (carrier)
-            {
-              case "e":
-                c = 4;
-                break;
-              case "h":
-                c = 5;
-                break;
-              case "y":
-                c = 6;
-                break;
-              case "m":
-                c = 7;
-                break;
-              default:
-                c = -1;
-                break;
-            }
-            if (c > -1)
-            {
-              int? contact;
-              int cn;
-
+            case "?":
+              this.output(
+                "{0} course IJNCV to Midway",
+                this.CourseTo(0, 5));
+              this.output(
+                "{0} course Midway to IJNCV",
+                this.CourseTo(5, 0));
+              this.output(
+                "{0} course TF-16 to IJNCV",
+                this.CourseTo(3, 0));
+              this.output(
+                "{0} course IJNCV to TF-16",
+                this.CourseTo(0, 3));
+              this.output(
+                "{0} course TF-17 to IJNCV",
+                this.CourseTo(4, 0));
+              this.output(
+                "{0} course IJNCV to TF-17",
+                this.CourseTo(0, 4));
+              break;
+            case "0":
+              this.AdvanceTime(0);
+              good = true;
+              break;
+            case "1":
+              this.AdvanceTime(1);
+              good = true;
+              break;
+            case "2":
+              this.AdvanceTime(2);
+              good = true;
+              break;
+            case "3":
+              this.AdvanceTime(3);
+              good = true;
+              break;
+            case "4":
+              this.AdvanceTime(4);
+              good = true;
+              break;
+            case "5":
+              this.AdvanceTime(5);
+              good = true;
+              break;
+            case "6":
+              this.AdvanceTime(6);
+              good = true;
+              break;
+            case "7":
+              this.AdvanceTime(7);
+              good = true;
+              break;
+            case "8":
+              this.AdvanceTime(8);
+              good = true;
+              break;
+            case "9":
+              this.AdvanceTime(9);
+              good = true;
+              break;
+            case "t":
               if (parts.Length == 3)
               {
-                if (int.TryParse(
+                decimal course;
+
+                decimal.TryParse(
                   parts[2],
-                  out cn))
+                  out course);
+                if (
+                  course >= 0M &&
+                  course <= 360M)
                 {
-                  contact = cn;
+                  switch (parts[1])
+                  {
+                    case "6":
+                    case "16":
+                      this.F[3, 4] = course;
+                      this.output(
+                        "TF-16 new course {0}°",
+                        this.F[3, 4]);
+                      good = true;
+                      this.taskForceUpdated?.Invoke();
+                      break;
+                    case "7":
+                    case "17":
+                      this.F[4, 4] = course;
+                      this.output(
+                        "TF-17 new course {0}°",
+                        this.F[4, 4]);
+                      good = true;
+                      this.taskForceUpdated?.Invoke();
+                      break;
+                  }
                 }
-                else
+              }
+              break;
+            case "s":
+              if (parts.Length == 3)
+              {
+                decimal speed;
+
+                decimal.TryParse(
+                  parts[2],
+                  out speed);
+                speed = Math.Max(0, Math.Min(speed, 26));
+                switch (parts[1])
                 {
-                  break;
+                  case "6":
+                  case "16":
+                    this.F[3, 5] = speed;
+                    this.output(
+                      "TF-16 new speed {0} knots",
+                      this.F[3, 5]);
+                    good = true;
+                    this.taskForceUpdated?.Invoke();
+                    break;
+                  case "7":
+                  case "17":
+                    this.F[4, 5] = speed;
+                    this.output(
+                      "TF-17 new speed {0} knots",
+                      this.F[4, 5]);
+                    good = true;
+                    this.taskForceUpdated?.Invoke();
+                    break;
                 }
               }
-              else
+              break;
+            case "a":
+              if (parts.Length == 5)
               {
-                contact = null;
+                int f4fs;
+                int sbds;
+                int tbds;
+
+                carrier = parts[1];
+                if (
+                  int.TryParse(
+                    parts[2],
+                    out f4fs) &&
+                  int.TryParse(
+                    parts[3],
+                    out sbds) &&
+                  int.TryParse(
+                    parts[4],
+                    out tbds))
+                {
+                  int c;
+
+                  switch (carrier)
+                  {
+                    case "e":
+                      c = 4;
+                      break;
+                    case "h":
+                      c = 5;
+                      break;
+                    case "y":
+                      c = 6;
+                      break;
+                    case "m":
+                      c = 7;
+                      break;
+                    default:
+                      c = -1;
+                      break;
+                  }
+                  if (c > -1)
+                  {
+                    this.ArmStrike(
+                      c,
+                      f4fs,
+                      sbds,
+                      tbds);
+                    good = true;
+                    this.taskForceUpdated?.Invoke();
+                  }
+                }
               }
-              this.LaunchStrike(
-                c,
-                contact);
-              good = true;
-            }
-          }
-          break;
-        case "ca":
-          if (parts.Length == 3)
-          {
-            int c;
-
-            carrier = parts[1];
-            switch (carrier)
-            {
-              case "e":
-                c = 4;
-                break;
-              case "h":
-                c = 5;
-                break;
-              case "y":
-                c = 6;
-                break;
-              case "m":
-                c = 7;
-                break;
-              default:
-                c = -1;
-                break;
-            }
-            if (c > -1)
-            {
-              int f4fs;
-
-              if (int.TryParse(
-                parts[2],
-                out f4fs))
+              break;
+            case "l":
+              if (
+                parts.Length == 2 ||
+                parts.Length == 3)
               {
-                this.SetCAP(
-                  c,
-                  f4fs);
-                good = true;
-                this.taskForceUpdated?.Invoke();
-              }
-            }
-          }
-          break;
-        case "cl":
-          if (parts.Length == 2)
-          {
-            int c;
+                carrier = parts[1];
+                int c;
 
-            carrier = parts[1];
-            switch (carrier)
-            {
-              case "e":
-                c = 4;
-                break;
-              case "h":
-                c = 5;
-                break;
-              case "y":
-                c = 6;
-                break;
-              case "m":
-                c = 7;
-                break;
-              default:
-                c = -1;
-                break;
-            }
-            if (c > -1)
-            {
-              this.ClearDecks(c);
-              good = true;
-              this.taskForceUpdated?.Invoke();
-            }
+                switch (carrier)
+                {
+                  case "e":
+                    c = 4;
+                    break;
+                  case "h":
+                    c = 5;
+                    break;
+                  case "y":
+                    c = 6;
+                    break;
+                  case "m":
+                    c = 7;
+                    break;
+                  default:
+                    c = -1;
+                    break;
+                }
+                if (c > -1)
+                {
+                  int? contact;
+                  int cn;
+
+                  if (parts.Length == 3)
+                  {
+                    if (int.TryParse(
+                      parts[2],
+                      out cn))
+                    {
+                      contact = cn;
+                    }
+                    else
+                    {
+                      break;
+                    }
+                  }
+                  else
+                  {
+                    contact = null;
+                  }
+                  this.LaunchStrike(
+                    c,
+                    contact);
+                  this.taskForceUpdated?.Invoke();
+                  good = true;
+                }
+              }
+              break;
+            case "ca":
+              if (parts.Length == 3)
+              {
+                int c;
+
+                carrier = parts[1];
+                switch (carrier)
+                {
+                  case "e":
+                    c = 4;
+                    break;
+                  case "h":
+                    c = 5;
+                    break;
+                  case "y":
+                    c = 6;
+                    break;
+                  case "m":
+                    c = 7;
+                    break;
+                  default:
+                    c = -1;
+                    break;
+                }
+                if (c > -1)
+                {
+                  if (this.C[c, 8] < 60)
+                  {
+                    int f4fs;
+
+                    if (int.TryParse(
+                      parts[2],
+                      out f4fs))
+                    {
+                      if (c == 7)
+                      {
+                        // midway, as ground base, could manage more
+                        f4fs = Math.Max(0, Math.Min(f4fs, 20));
+                      }
+                      else
+                      {
+                        f4fs = Math.Max(0, Math.Min(f4fs, 10));
+                      }
+                      this.SetCAP(
+                        c,
+                        f4fs);
+                      good = true;
+                      this.taskForceUpdated?.Invoke();
+                    }
+                  }
+                  else
+                  {
+                    this.output(
+                      "{0} is not currently capable of flight operations.",
+                      this.vessels[c]);
+                  }
+                }
+              }
+              break;
+            case "cl":
+              if (parts.Length == 2)
+              {
+                int c;
+
+                carrier = parts[1];
+                switch (carrier)
+                {
+                  case "e":
+                    c = 4;
+                    break;
+                  case "h":
+                    c = 5;
+                    break;
+                  case "y":
+                    c = 6;
+                    break;
+                  case "m":
+                    c = 7;
+                    break;
+                  default:
+                    c = -1;
+                    break;
+                }
+                if (c > -1)
+                {
+                  this.ClearDecks(c);
+                  good = true;
+                  this.taskForceUpdated?.Invoke();
+                }
+              }
+              break;
           }
-          break;
-      }
-      if (!good)
-      {
-        this.output("COMMANDS ARE:");
-        this.output("T-CHANGE TF COURSE  CA-SET CAP");
-        this.output("A-ARM STRIKE        CL-CLEAR DECK");
-        this.output("L-LAUNCH STRIKE      #-WAIT # HOURS");
+          if (!good)
+          {
+            this.output("COMMANDS ARE:");
+            this.output("T-CHANGE TF COURSE  CA-SET CAP");
+            this.output("A-ARM STRIKE        CL-CLEAR DECK");
+            this.output("L-LAUNCH STRIKE      #-WAIT # HOURS");
+          }
+        }
+        else
+        {
+          this.output("This campaign has ended.");
+        }
       }
     }
 
@@ -990,7 +1093,7 @@ namespace MidwayEngine
       Debug.Assert(this.C[carrier, 5] < 300);
       this.C[carrier, 1] = this.C[carrier, 1] + this.C[carrier, 4];
       this.C[carrier, 4] = 0;
-      this.C[carrier, 2] = this.C[carrier, 2] + this.C[carrier, 5];
+      this.C[carrier, 2] = this.C[carrier, 2] + (this.C[carrier, 5] % 1000);
       this.C[carrier, 5] = 0;
       this.C[carrier, 3] = this.C[carrier, 3] + this.C[carrier, 6];
       this.C[carrier, 6] = 0;
@@ -1114,15 +1217,48 @@ namespace MidwayEngine
       */
       if (cn > 0)
       {
-        if (this.C[carrier, 5] + this.C[carrier, 6] > 0)
+        if ((this.C[carrier, 5] % 1000) + this.C[carrier, 6] > 0)
         {
           if (this.C[carrier, 5] < 1000)
           {
-            if (
-              cn == 1 &&
-              contact == null)
+            if (contact == null)
             {
-              contact = 1;
+              if (cn == 1)
+              {
+                contact = 1;
+              }
+              else
+              {
+                decimal testr;
+                int fromtf;
+                int testco;
+                int testc;
+
+                fromtf = (int)this.C[carrier, 0];
+                for (
+                  testc = 1;
+                  testc <= cn;
+                  ++testc)
+                {
+                  testco = this.contactList[testc - 1];
+                  testr = this.CalculateRange(
+                    testco,
+                    fromtf);
+                  if (testr <= 200m)
+                  {
+                    if (contact == null)
+                    {
+                      contact = testc;
+                    }
+                    else
+                    {
+                      // 2 targets in range so they HAVE to specify
+                      contact = null;
+                      break;
+                    }
+                  }
+                }
+              }
             }
             if (
               contact >= 1 &&
@@ -1147,15 +1283,15 @@ namespace MidwayEngine
                 if (carrier < 7) // not midway
                 {
                   if (
-                    this.t + flightTime * 2 <= 240 ||
-                    this.t + flightTime * 2 > 1140)
+                    this.time + flightTime * 2 <= 240 ||
+                    this.time + flightTime * 2 > 1140)
                   {
                     this.output("Cannot launch strike; no night landing capabilities.");
                     clear = false;
                   }
                   else if (
-                    this.t + flightTime <= 240 ||
-                    this.t + flightTime > 1140)
+                    this.time + flightTime <= 240 ||
+                    this.time + flightTime > 1140)
                   {
                     this.output("Strike force does not have night attack capabilities.");
                     clear = false;
@@ -1188,15 +1324,15 @@ namespace MidwayEngine
                     decimal rnd;
 
                     this.S[slot.Value, 0] = this.C[carrier, 4];
-                    this.S[slot.Value, 2] = this.C[carrier, 5];
+                    this.S[slot.Value, 2] = this.C[carrier, 5] % 1000;
                     this.S[slot.Value, 4] = this.C[carrier, 6];
                     this.C[carrier, 4] = 0;
                     this.C[carrier, 5] = 0;
                     this.C[carrier, 6] = 0;
                     this.S[slot.Value, 6] = co;
                     this.S[slot.Value, 9] = carrier;
-                    this.S[slot.Value, 7] = this.t + this.d * 1440 + flightTime;
-                    this.S[slot.Value, 8] = this.t + this.d * 1440 + flightTime * 2.0m;
+                    this.S[slot.Value, 7] = this.time + this.day * 1440 + flightTime;
+                    this.S[slot.Value, 8] = this.time + this.day * 1440 + flightTime * 2.0m;
                     this.S[slot.Value, 3] = 1;
                     this.S[slot.Value, 5] = 0;
                     odds =
@@ -1212,6 +1348,7 @@ namespace MidwayEngine
                     {
                       this.S[slot.Value, 1] = 0;
                     }
+                    this.S[slot.Value, 10] = 0;
                     this.output(
                       "{0}'s strike force is taking off.",
                       this.vessels[carrier]);
@@ -1284,47 +1421,53 @@ namespace MidwayEngine
 
     private void AdvanceTime(int hours)
     {
-      int dStop;
-      int tStop;
-
-      dStop = this.d;
-      tStop = this.t + hours * 60;
-      while (tStop > 1440)
-      {
-        ++dStop;
-        tStop -= 1440;
-      }
-      this.interruptTimeAdvancement = false;
-      for (; ; )
-      {
-        this.ProcessActivities();
-        if (
-          this.interruptTimeAdvancement ||
-          this.d > dStop ||
-          (this.d == dStop &&
-          this.t >= tStop))
-        {
-          break;
-        }
-      }
+      this.activitiesHappening = true;
+      this.startingActivities?.Invoke();
       this.taskForceUpdated?.Invoke();
+      Task.Run(() =>
+      {
+        int dStop;
+        int tStop;
+
+        dStop = this.day;
+        tStop = this.time + hours * 60;
+        while (tStop > 1440)
+        {
+          ++dStop;
+          tStop -= 1440;
+        }
+        this.interruptTimeAdvancement = false;
+        for (; ; )
+        {
+          this.ProcessActivities();
+          if (
+            this.interruptTimeAdvancement ||
+            this.day > dStop ||
+            (this.day == dStop &&
+            this.time >= tStop))
+          {
+            break;
+          }
+        }
+        this.activitiesHappening = false;
+        this.endingActivitiies?.Invoke();
+        this.taskForceUpdated?.Invoke();
+      });
     }
 
     private void ProcessActivities()
     {
-      /*
       if (this.showJapaneseCarrierHealths)
       {
-        this.outputText?.Invoke(
-          string.Format(
-            "Damages: Akagi {0}%, Kaga {1}%, Soryu {2}%, Hiryu {3}%",
-            this.C[0, 8].ToString("0.0"),
-            this.C[1, 8].ToString("0.0"),
-            this.C[2, 8].ToString("0.0"),
-            this.C[3, 8].ToString("0.0")));
+        /*
+        this.output(
+          "Damages: Akagi {0}%, Kaga {1}%, Soryu {2}%, Hiryu {3}%",
+          this.C[0, 8].ToString("0.0"),
+          this.C[1, 8].ToString("0.0"),
+          this.C[2, 8].ToString("0.0"),
+          this.C[3, 8].ToString("0.0"));
+        */
       }
-      */
-      this.interruptTimeAdvancement = false;
       this.SpotAnyVisualRangeForces();
       this.PrepareUSStrikes();
       this.UpdateIJNCruisers();
@@ -1336,6 +1479,7 @@ namespace MidwayEngine
       this.AdvanceTime();
       this.ProcessPBYScoutPlanes();
       this.ProcessJapaneseScoutPlanes();
+      this.ProcessApproachingStrikes();
       this.ProcessStrikes();
       this.ProcessCAPReturns();
       this.LandStrikes();
@@ -1517,20 +1661,19 @@ namespace MidwayEngine
             if (r <= 6.0M)
             {
               if (
-                this.t >= 240 &&
-                this.t <= 1140)
+                this.time >= 240 &&
+                this.time <= 1140)
               {
                 // visual detection
                 c = this.CourseTo(j, i);
                 // radar detection
                 this.F[i, 2] = 2;
-                this.outputText?.Invoke(
-                  string.Format(
-                    "{0} has visual sighting of Japanese {1} bearing {2}° at {3} nautical miles.",
-                    this.getTaskForceName(j),
-                    this.getTaskForceName(i),
-                    c.ToString("0"),
-                    r.ToString("0.0")));
+                this.output(
+                  "{0} has visual sighting of Japanese {1} bearing {2}° at {3} nautical miles.",
+                  this.getTaskForceName(j),
+                  this.getTaskForceName(i),
+                  c.ToString("0"),
+                  r.ToString("0.0"));
                 this.interruptTimeAdvancement = true;
               }
             }
@@ -1541,21 +1684,20 @@ namespace MidwayEngine
                 c = this.CourseTo(j, i);
                 // radar detection
                 this.F[i, 2] = 1;
-                this.outputText?.Invoke(
-                  string.Format(
-                    "{0} radar has identified contact {1} bearing {2}° at {3} nautical miles.",
-                    this.getTaskForceName(j),
-                    this.getContactAlias(i),
-                    c.ToString("0"),
-                    r.ToString("0.0")));
+                this.output(
+                  "{0} radar has identified contact {1} bearing {2}° at {3} nautical miles.",
+                  this.getTaskForceName(j),
+                  this.getContactAlias(i),
+                  c.ToString("0"),
+                  r.ToString("0.0"));
                 this.interruptTimeAdvancement = true;
               }
             }
           }
           if (
             this.F[j, 2] < 2 &&
-            this.t >= 240 &&
-            this.t <= 1140)
+            this.time >= 240 &&
+            this.time <= 1140)
           {
             if (r <= 8.0M)
             {
@@ -1565,19 +1707,17 @@ namespace MidwayEngine
                 this.F[j, 2] = 1;
                 if (this.F[i, 2] == 2)
                 {
-                  this.outputText?.Invoke(
-                    string.Format(
-                      "{0} has come within visual sight range of {1}.",
-                      this.getTaskForceName(i),
-                      this.getTaskForceName(j)));
+                  this.output(
+                    "{0} has come within visual sight range of {1}.",
+                    this.getTaskForceName(i),
+                    this.getTaskForceName(j));
                 }
                 else
                 {
-                  this.outputText?.Invoke(
-                    string.Format(
-                      "{0} has come within visual sight range of {1}.",
-                      this.getTaskForceName(i),
-                      this.getContactAlias(j)));
+                  this.output(
+                    "{0} has come within visual sight range of {1}.",
+                    this.getTaskForceName(i),
+                    this.getContactAlias(j));
                 }
               }
             }
@@ -1590,6 +1730,20 @@ namespace MidwayEngine
               }
             }
           }
+        }
+      }
+      this.UpdateJapaneseCarrierInTheaterAwareness();
+    }
+    
+    private void UpdateJapaneseCarrierInTheaterAwareness()
+    {
+      if (!this.japaneseKnowAmericaCarriersInArea)
+      {
+        if (
+          this.F[3, 2] == 2 ||
+          this.F[3, 3] == 2)
+        {
+          this.japaneseKnowAmericaCarriersInArea = true;
         }
       }
     }
@@ -1627,14 +1781,15 @@ namespace MidwayEngine
           2);
         if (r < 50M)
         {
-          this.c5 = 10;
+          this.cruiserGroupLosses = 10;
         }
       }
       if (
         this.allJapaneseCarriersIncapacitated ||
-        this.c5 > 9)
+        this.noJapaneseCarrierStrikePlanes ||
+        this.cruiserGroupLosses > 9)
       {
-        this.F[2, 5] = 25m + 15m * mVal(this.c7 > 255);
+        this.F[2, 5] = 25m + 15m * mVal(this.cruiserGroupDamages > 255);
         this.F[2, 4] = 270m;
       }
     }
@@ -1649,7 +1804,9 @@ namespace MidwayEngine
         // transports stop by Midway
         this.F[1, 5] = 0;
       }
-      if (this.allJapaneseCarriersIncapacitated)
+      if (
+        this.allJapaneseCarriersIncapacitated ||
+        this.noJapaneseCarrierStrikePlanes)
       {
         // if Japanese have lost carriers, they flee westward
         // no considering US carriers gone -- more coming and Japanese didn't know how many more there were anyway
@@ -1661,6 +1818,7 @@ namespace MidwayEngine
     private void CheckForJapaneseAirCapabilities()
     {
       bool anyJapaneseCarriersFunctioning;
+      bool noPlanes;
       int i;
 
       // do we have any major carriers functioning?
@@ -1669,13 +1827,39 @@ namespace MidwayEngine
       anyJapaneseCarriersFunctioning = false;
       for (i = 0; i < 4; ++i)
       {
-        if (this.C[i, 8] <= 60)
+        if (this.C[i, 8] < 60)
         {
           anyJapaneseCarriersFunctioning = true;
           break;
         }
       }
       this.allJapaneseCarriersIncapacitated = !anyJapaneseCarriersFunctioning;
+      noPlanes = true;
+      for (i = 0; i < 10; ++i)
+      {
+        if (
+          this.S[i, 9] != -1 &&
+          this.C[(int) this.S[i, 9], 0] < 3)
+        {
+          noPlanes = false;
+          break;
+        }
+      }
+      for (i = 0; i < 4; ++i)
+      {
+        if (
+          this.C[i, 8] < 100 &&
+          ((int)
+            this.C[i, 2] +
+            this.C[i, 3] +
+            this.C[i, 5] +
+            this.C[i, 6]) > 0)
+        {
+          noPlanes = false;
+          break;
+        }
+      }
+      this.noJapaneseCarrierStrikePlanes = noPlanes;
     }
 
     private void AdvanceTime()
@@ -1686,7 +1870,7 @@ namespace MidwayEngine
       //int p;
 
       t1 = 10 + this.random.Next(0, 11);
-      this.t += t1;
+      this.time += t1;
       /* -- to proceed no input -- we handle differently
       if (
         this.t >= this.t0 &&
@@ -1695,10 +1879,10 @@ namespace MidwayEngine
         this.interruptTimeAdvancement = 1;
       }
       */
-      if (this.t >= 1440)
+      if (this.time >= 1440)
       {
-        ++this.d;
-        this.t -= 1440;
+        ++this.day;
+        this.time -= 1440;
       }
       /* -- to proceed no input -- we handle differently
       if (
@@ -1725,6 +1909,48 @@ namespace MidwayEngine
       }
     }
 
+    private void ProcessApproachingStrikes()
+    {
+      int i;
+
+      for (i = 0; i <= 9; ++i)
+      {
+        if (
+          this.S[i, 9] != -1 &&
+          this.S[i, 10] == 0 &&
+          this.S[i, 6] >= 3)
+        {
+          // US radar can pick up planes like 60 to 80 miles away...  dependent on weather and altitude
+          // I'm going to report approaching planes between 18 and 32 minutes away
+          int minsAway;
+
+          minsAway =
+            ((int)this.S[i, 7]) -
+            this.day * 1440 -
+            this.time;
+          if (minsAway <= this.random.Next(18, 33))
+          {
+            decimal bearing;
+            decimal miles;
+
+            bearing = this.CourseTo(
+              (int) this.S[i, 6],
+              (int) this.C[(int) this.S[i, 9], 0]) -
+              10m +
+              (decimal) (this.random.NextDouble() * 20.0);
+            miles = minsAway * this.random.Next(120, 140) / 60; // val cruise speed 140, others faster
+            this.S[i, 10] = 1;
+            this.output(
+              "{0}'s radar reports bogies approaching from {1}° at {2} miles.",
+              this.getTaskForceName((int)S[i, 6]),
+              bearing.ToString("0"),
+              miles.ToString("0"));
+            this.interruptTimeAdvancement = true;
+          }
+        }
+      }
+    }
+
     private void ProcessStrikes()
     {
       int i;
@@ -1734,7 +1960,7 @@ namespace MidwayEngine
         if (
           this.S[i, 9] != -1 &&
           this.S[i, 7] > 0 &&
-          this.S[i, 7] <= this.d * 1440m + this.t)
+          this.S[i, 7] <= this.day * 1440m + this.time)
         {
           this.S[i, 7] = -Math.Abs(this.S[i, 7]); // strikes only get one attack!
           if (this.S[i, 1] != -1)
@@ -1742,7 +1968,7 @@ namespace MidwayEngine
             // was this strike on no longer existent cruiser fleet?
             if (
               this.S[i, 6] != 2 ||
-              this.c7 <= 511)
+              this.cruiserGroupDamages <= 511)
             {
               this.ProcessStrike(i);
             }
@@ -1753,17 +1979,15 @@ namespace MidwayEngine
               this.S[i, 9] >= 4 &&
               this.S[i, 9] <= 7)
             {
-              this.outputText?.Invoke(
-                string.Format(
-                  "{0}'s strike misses their target and turns back.",
-                  this.vessels[(int) this.S[i, 9]]));
+              this.output(
+                "{0}'s strike misses their target and turns back.",
+                this.vessels[(int) this.S[i, 9]]);
             }
             else if (this.random.NextDouble() < 0.5)
             {
-              this.outputText?.Invoke(
-                string.Format(
-                  "{0}'s radar sees a group of planes searching the area then returning the way they came.",
-                  this.getTaskForceName((int)S[i, 6])));
+              this.output(
+                "{0}'s radar sees a group of planes searching the area then returning the way they came.",
+                this.getTaskForceName((int)S[i, 6]));
             }
           }
         }
@@ -1779,7 +2003,7 @@ namespace MidwayEngine
       decimal dmg;
       decimal r;
       bool japanese;
-      bool waveMisses;
+      //bool waveMisses;
       //bool sunk;
       int count;
       int h;
@@ -1837,11 +2061,10 @@ namespace MidwayEngine
             this.S[si, i] != 0 &&
             this.S[si, i + 1] == -1)
           {
-            this.outputText?.Invoke(
-              string.Format(
-                "{0}'s {1} miss target.",
-                this.vessels[(int)this.S[si, 9]],
-                this.planes[0, i / 2]));
+            this.output(
+              "{0}'s {1} miss target.",
+              this.vessels[(int)this.S[si, 9]],
+              this.planes[0, i / 2]);
           }
         }
       }
@@ -1871,16 +2094,23 @@ namespace MidwayEngine
           target =
             "Japanese " +
             this.getGenericTaskForceName((int)this.S[si, 6]);
+          if (this.CalculateRange(5, (int)this.S[si, 6]) > 220m + this.random.Next(40))
+          {
+            // if strike is far enough out from midway... Japanese
+            // likely to realize American Carriers in play.
+            this.japaneseKnowAmericaCarriersInArea = true;
+          }
         }
-        this.outputText?.Invoke(
-          string.Format(
-            "{0} air strike is attacking {1}!!!",
-            origin,
-            target));
+        this.strikeHappening = true;
+        this.output(
+          Environment.NewLine +
+          "{0} air strike is attacking {1}!!!",
+          origin,
+          target);
         this.interruptTimeAdvancement = true;
 
         attackCarriers = false;
-        for (i = 0; i < 9; ++i)
+        for (i = 0; i <= 8; ++i)
         {
           if (
             this.S[si, 6] == this.C[i, 0] &&
@@ -1907,14 +2137,13 @@ namespace MidwayEngine
               this.S[si, i + 1] != -1)
             {
               count = (int)this.S[si, i];
-              this.outputText?.Invoke(
-                string.Format(
-                  "{0} {1} attack {2}.",
-                  count,
-                  this.planes[
-                    japanese ? 1 : 0,
-                    i / 2],
-                  this.getTaskForceName((int) this.S[si, 6])));
+              this.output(
+                "{0} {1} attack {2}.",
+                count,
+                this.planes[
+                  japanese ? 1 : 0,
+                  i / 2],
+                this.getTaskForceName((int) this.S[si, 6]));
               switch (i)
               {
                 case 2:
@@ -1958,38 +2187,37 @@ namespace MidwayEngine
                 dmg = 16m;
               }
               vp = (int)(dmg * (h + n / 3));
-              this.outputText?.Invoke(
-                string.Format(
-                  "{0} victory points awarded!",
-                  vp));
+              this.output(
+                "{0} victory points awarded!",
+                vp);
               if (japanese)
               {
-                this.v1 += vp;
+                this.victoryPointsJapan += vp;
               }
               else
               {
-                this.v0 += vp;
+                this.victoryPointsUS += vp;
               }
               if (this.S[si, 6] == 2)
               {
                 // cruiser attack
-                this.c7 += vp;
-                if (this.c7 >= 255)
+                this.cruiserGroupDamages += vp;
+                if (this.cruiserGroupDamages >= 255)
                 {
-                  if (this.c7 - vp < 255)
+                  if (this.cruiserGroupDamages - vp < 255)
                   {
-                    this.outputText?.Invoke("IJN Cruisers are severely crippled.");
+                    this.output("IJN Cruisers are severely crippled.");
                     this.F[2, 6] *= 3;
                     this.F[2, 5] = 10;
-                    this.c5 = 10;
+                    this.cruiserGroupLosses = 10;
                   }
-                  if (this.c7 >= 512)
+                  if (this.cruiserGroupDamages >= 512)
                   {
-                    if (this.c7 - vp < 512)
+                    if (this.cruiserGroupDamages - vp < 512)
                     {
-                      this.outputText?.Invoke("All IJN Cruisers have been sunk!!!");
-                      v0 = v0 - c7 + 512;
-                      c7 = 512;
+                      this.output("All IJN Cruisers have been sunk!!!");
+                      victoryPointsUS = victoryPointsUS - cruiserGroupDamages + 512;
+                      cruiserGroupDamages = 512;
                       this.F[2, 2] = 0;
                       this.F[2, 5] = 0;
                       this.F[2, 0] = -1000;
@@ -2063,19 +2291,18 @@ namespace MidwayEngine
           }
           else if (this.S[si, 0] + this.S[si, 2] + this.S[si, 4] == 0)
           {
-            this.outputText?.Invoke(
-              string.Format(
-                "{0} strike force was obliterated.",
-                japanese ? "Japanese" : "US"));
+            this.output(
+              "{0} strike force was obliterated.",
+              japanese ? "Japanese" : "US");
           }
           else
           {
-            this.outputText?.Invoke(
-              string.Format(
-                "{0} strike force turns back with no viable attacking units on target.",
-                japanese ? "Japanese" : "US"));
+            this.output(
+              "{0} strike force turns back with no viable attacking units on target.",
+              japanese ? "Japanese" : "US");
           }
         }
+        this.strikeHappening = false;
       }
       this.S[si, 1] = -1;
       this.S[si, 3] = -1;
@@ -2183,19 +2410,18 @@ namespace MidwayEngine
             attackerCount = (int) this.C[v, 9];
             if (attackerCount > 0)
             {
-              this.outputText?.Invoke(
-                string.Format(
-                  "{0} {1} {2} attacking {3}.",
-                  attackerCount,
-                  (attackerCount != 1) ?
-                    this.planes[
-                      japanese ? 1 : 0,
-                      wave / 2] :
-                    this.plane[
-                      japanese ? 1 : 0,
-                      wave / 2],
-                  (attackerCount != 1) ? "are" : "is",
-                  this.vessels[v]));
+              this.output(
+                "{0} {1} {2} attacking {3}.",
+                attackerCount,
+                (attackerCount != 1) ?
+                  this.planes[
+                    japanese ? 1 : 0,
+                    wave / 2] :
+                  this.plane[
+                    japanese ? 1 : 0,
+                    wave / 2],
+                (attackerCount != 1) ? "are" : "is",
+                this.vessels[v]);
               this.ProcessAttackWave(
                 japanese,
                 wave == 2 ? PlaneTypes.Bomber : PlaneTypes.TorpedoBomber,
@@ -2235,7 +2461,15 @@ namespace MidwayEngine
           // so giving US a 25% bonus here
           //odds = 0.2m;
           odds = japanese ? 0.2m : 0.25m;
-          dmg = 16m;
+          if (vesselIndex == 7)
+          {
+            // original game had 16 but midway should be surviving as per history
+            dmg = 9m;
+          }
+          else
+          {
+            dmg = 16m;
+          }
           break;
         case PlaneTypes.TorpedoBomber:
           // American TBD is horrible (retired after action) and
@@ -2244,7 +2478,8 @@ namespace MidwayEngine
           odds = japanese ? 0.2m : 0.06m;
           if (vesselIndex == 7)
           {
-            dmg = 16m;
+            // original game had 16 but midway should be surviving as per history
+            dmg = 9m;
           }
           else
           {
@@ -2280,8 +2515,10 @@ namespace MidwayEngine
           // reflect that.
           if (
             planeType == PlaneTypes.TorpedoBomber &&
-            !japanese &&
-            this.random.Next() < 0.2)
+            ((japanese &&
+            this.random.NextDouble() < 0.02) ||
+            (!japanese &&
+            this.random.NextDouble() < 0.12)))
           {
             this.outputWord?.Invoke("  A DUD.");
           }
@@ -2314,27 +2551,26 @@ namespace MidwayEngine
       decimal odds;
       int i;
 
-      this.outputText?.Invoke(
-        string.Format(
-          "{0} CAP of {1} {2} {3} {4} {5}.",
-          japanese ? "US" : "Japanese",
-          capCount,
-          (capCount == 1) ?
-            this.plane[
-              japanese ? 0 : 1,
-              0] :
-            this.planes[
-              japanese ? 0 : 1,
-              0],
-          (capCount == 1) ? "attacks" : "attack",
-          capTargetCount,
-          (capTargetCount == 1) ?
-            this.plane[
-              japanese ? 1 : 0,
-              capTarget / 2] :
-            this.planes[
-              japanese ? 1 : 0,
-              capTarget / 2]));
+      this.output(
+        "{0} CAP of {1} {2} {3} {4} {5}.",
+        japanese ? "US" : "Japanese",
+        capCount,
+        (capCount == 1) ?
+          this.plane[
+            japanese ? 0 : 1,
+            0] :
+          this.planes[
+            japanese ? 0 : 1,
+            0],
+        (capCount == 1) ? "attacks" : "attack",
+        capTargetCount,
+        (capTargetCount == 1) ?
+          this.plane[
+            japanese ? 1 : 0,
+            capTarget / 2] :
+          this.planes[
+            japanese ? 1 : 0,
+            capTarget / 2]);
       if (4 - this.S[si, 1] * 2 == capTarget)
       {
         attackingFighterCount = (int) this.S[si, 0];
@@ -2345,18 +2581,17 @@ namespace MidwayEngine
       }
       if (attackingFighterCount > 0)
       {
-        this.outputText?.Invoke(
-          string.Format(
-            "{0} {1} {2} the {3} {4}.",
-            attackingFighterCount,
-            (attackingFighterCount == 1) ?
-              this.plane[japanese ? 1 : 0, 0] :
-              this.planes[japanese ? 1 : 0, 0],
-            attackingFighterCount == 1 ? "defends" : "defend",
-            (int) this.S[si, capTarget],
-            (this.S[si, capTarget] == 1) ?
-              this.plane[japanese ? 1 : 0, capTarget / 2] :
-              this.planes[japanese ? 1 : 0, capTarget / 2]));
+        this.output(
+          "{0} {1} {2} the {3} {4}.",
+          attackingFighterCount,
+          (attackingFighterCount == 1) ?
+            this.plane[japanese ? 1 : 0, 0] :
+            this.planes[japanese ? 1 : 0, 0],
+          attackingFighterCount == 1 ? "defends" : "defend",
+          (int) this.S[si, capTarget],
+          (this.S[si, capTarget] == 1) ?
+            this.plane[japanese ? 1 : 0, capTarget / 2] :
+            this.planes[japanese ? 1 : 0, capTarget / 2]);
       }
       // slight edge to zeroes on attacking non-fighters 1.4 to 1.3
       odds =
@@ -2370,11 +2605,31 @@ namespace MidwayEngine
         // yorktown F4F's -- were extra successful at Midway
         // first use of Thach weave by him and his fighter group VF-3 off Yorktown
         odds *= 0.8m;
+        if (!this.mentionedThachWeave)
+        {
+          if (this.S[si, 1] > 1)
+          {
+            this.output(
+              "Attacking Yorktown {0} implement the Thach weave.",
+              this.planes[0, 0]);
+          }
+          this.mentionedThachWeave = true;
+        }
       }
       else if (this.S[si, 6] == 4)
       {
         // attacking yorktown -- thach advantage to CAP
         odds *= 1.2m;
+        if (!this.mentionedThachWeave)
+        {
+          if (capCount > 1)
+          {
+            this.output(
+              "Defending Yorktown {0} implement the Thach weave.",
+              this.planes[0, 0]);
+          }
+          this.mentionedThachWeave = true;
+        }
       }
       // odds of CAP shootdown affected by defending fighters count and some offsets
       // for superior Japanese fighters at the time.
@@ -2389,55 +2644,51 @@ namespace MidwayEngine
       }
       if (capVictories > 0)
       {
-        this.outputText?.Invoke(
-          string.Format(
-            "{0} CAP shoots down {1} {2}.",
-            japanese ? "US" : "Japanese",
-            capVictories,
-            (capVictories == 1) ?
-              this.plane[
-                japanese ? 1 : 0,
-                capTarget / 2] :
-              this.planes[
-                japanese ? 1 : 0,
-                capTarget / 2]));
+        this.output(
+          "{0} CAP shoots down {1} {2}.",
+          japanese ? "US" : "Japanese",
+          capVictories,
+          (capVictories == 1) ?
+            this.plane[
+              japanese ? 1 : 0,
+              capTarget / 2] :
+            this.planes[
+              japanese ? 1 : 0,
+              capTarget / 2]);
         this.S[si, capTarget] -= capVictories;
         if (this.S[si, capTarget] == 0)
         {
-          this.outputText?.Invoke(
-            string.Format(
-              "Attacking {0} are completly eradicated!!!",
-              (capVictories == 1) ?
-              this.plane[
-                japanese ? 1 : 0,
-                capTarget / 2] :
-              this.planes[
-                japanese ? 1 : 0,
-                capTarget / 2]));
+          this.output(
+            "Attacking {0} are completly eradicated!!!",
+            (capVictories == 1) ?
+            this.plane[
+              japanese ? 1 : 0,
+              capTarget / 2] :
+            this.planes[
+              japanese ? 1 : 0,
+              capTarget / 2]);
         }
       }
       else
       {
-        this.outputText?.Invoke(
-          string.Format(
-            "{0} CAP fails to score any kills.",
-            japanese ? "US" : "Japanese"));
+        this.output(
+          "{0} CAP fails to score any kills.",
+          japanese ? "US" : "Japanese");
       }
       if (attackingFighterCount > 0)
       {
-        this.outputText?.Invoke(
-          string.Format(
-            "{0} {1} {2} the {3} CAP of {4} {5}.",
-            attackingFighterCount,
-            (attackingFighterCount == 1) ?
-              this.plane[japanese ? 1 : 0, 0] :
-              this.planes[japanese ? 1 : 0, 0],
-            attackingFighterCount == 1 ? "attacks" : "attack",
-            japanese ? "US" : "Japanese",
-            capCount,
-            (capCount == 1) ?
-              this.plane[japanese ? 0 : 1, 0] :
-              this.planes[japanese ? 0 : 1, 0]));
+        this.output(
+          "{0} {1} {2} the {3} CAP of {4} {5}.",
+          attackingFighterCount,
+          (attackingFighterCount == 1) ?
+            this.plane[japanese ? 1 : 0, 0] :
+            this.planes[japanese ? 1 : 0, 0],
+          attackingFighterCount == 1 ? "attacks" : "attack",
+          japanese ? "US" : "Japanese",
+          capCount,
+          (capCount == 1) ?
+            this.plane[japanese ? 0 : 1, 0] :
+            this.planes[japanese ? 0 : 1, 0]);
         odds =
           (attackingFighterCount * this.W[japanese ? 0 : 1]) /
           (capCount * this.W[japanese ? 1 : 0]);
@@ -2464,39 +2715,36 @@ namespace MidwayEngine
         }
         if (attackingFighterVictories > 0)
         {
-          this.outputText?.Invoke(
-            string.Format(
-              "{0} escort {1} down {2} {3}.",
-              japanese ? "Japanese" : "US",
-              (attackingFighterCount == 1) ?
-                "fighter shoots" :
-                "fighters shoot",
-              attackingFighterVictories,
-              (attackingFighterVictories == 1) ?
-                this.plane[
-                  japanese ? 0 : 1,
-                  0] :
-                this.planes[
-                  japanese ? 0 : 1,
-                  0]));
+          this.output(
+            "{0} escort {1} down {2} {3}.",
+            japanese ? "Japanese" : "US",
+            (attackingFighterCount == 1) ?
+              "fighter shoots" :
+              "fighters shoot",
+            attackingFighterVictories,
+            (attackingFighterVictories == 1) ?
+              this.plane[
+                japanese ? 0 : 1,
+                0] :
+              this.planes[
+                japanese ? 0 : 1,
+                0]);
           capCount -= attackingFighterVictories;
           if (capCount == 0)
           {
-            this.outputText?.Invoke(
-              string.Format(
-                "{0} CAP is eradicated!!!",
-                japanese ? "US" : "Japanese"));
+            this.output(
+              "{0} CAP is eradicated!!!",
+              japanese ? "US" : "Japanese");
           }
         }
         else
         {
-          this.outputText?.Invoke(
-            string.Format(
-              "{0} escort {1} to score any kills.",
-              japanese ? "US" : "Japanese",
-              (attackingFighterCount == 1) ?
-                "fighter fails" :
-                "fighters fail"));
+          this.output(
+            "{0} escort {1} to score any kills.",
+            japanese ? "US" : "Japanese",
+            (attackingFighterCount == 1) ?
+              "fighter fails" :
+              "fighters fail");
         }
         if (capCount > 0)
         {
@@ -2525,34 +2773,32 @@ namespace MidwayEngine
           }
           if (capVictories > 0)
           {
-            this.outputText?.Invoke(
-              string.Format(
-                "{0} CAP shoots down {1} of the escorting {2}.",
-                japanese ? "US" : "Japanese",
-                capVictories,
-                (capVictories == 1) ?
-                  this.plane[
-                    japanese ? 1 : 0,
-                    0] :
-                  this.planes[
-                    japanese ? 1 : 0,
-                    0]));
+            this.output(
+              "{0} CAP shoots down {1} of the escorting {2}.",
+              japanese ? "US" : "Japanese",
+              capVictories,
+              (capVictories == 1) ?
+                this.plane[
+                  japanese ? 1 : 0,
+                  0] :
+                this.planes[
+                  japanese ? 1 : 0,
+                  0]);
             this.S[si, 0] -= capVictories;
             if (this.S[si, 0] == 0)
             {
-              this.outputText?.Invoke("Escort fighter squadron completely eradicated!!!");
+              this.output("Escort fighter squadron completely eradicated!!!");
             }
           }
           else
           {
-            this.outputText?.Invoke(
-              string.Format(
-                "{0} CAP fails to score any kills on the escorting {1} {2}.",
-                japanese ? "US" : "Japanese",
-                japanese ? "Japanese" : "US",
-                (attackingFighterCount == 1) ?
-                  this.plane[japanese ? 1 : 0, 0] :
-                  this.planes[japanese ? 1 : 0, 0]));
+            this.output(
+              "{0} CAP fails to score any kills on the escorting {1} {2}.",
+              japanese ? "US" : "Japanese",
+              japanese ? "Japanese" : "US",
+              (attackingFighterCount == 1) ?
+                this.plane[japanese ? 1 : 0, 0] :
+                this.planes[japanese ? 1 : 0, 0]);
           }
         }
       }
@@ -2621,15 +2867,17 @@ namespace MidwayEngine
               ++h;
             }
           }
-          this.outputText?.Invoke(
-            string.Format(
+          if (h > 0)
+          {
+            this.output(
               "On the way {0}, {1} AA shoots down {2} {3}.",
               inbound ? "in" : "out",
               this.getTaskForceName((int)this.S[si, 6]),
               (int)h,
               this.planes[
                 japanese ? 1 : 0,
-                i / 2]));
+                i / 2]);
+          }
           this.S[si, i] -= h;
         }
       }
@@ -2638,18 +2886,19 @@ namespace MidwayEngine
     private void ProcessPBYScoutPlanes()
     {
       bool spotHappened;
+      decimal odds;
       int i;
 
       if (
-        this.t >= 240 &&
-        this.t <= 1140)
+        this.time >= 240 &&
+        this.time <= 1140)
       {
-        p = (this.t < 300 || (this.t > 720 && this.t < 780)) ? 3 : 1;
+        odds = (this.time < 300 || (this.time > 720 && this.time < 780)) ? 3 : 1;
         for (i = 0; i < 2; ++i)
         {
           if (
             this.F[i, 2] != 2 &&
-            this.c7 < 512)
+            this.cruiserGroupDamages < 512)
           {
             if (this.F[i, 5] == 0)
             {
@@ -2658,21 +2907,21 @@ namespace MidwayEngine
             spotHappened = false;
             if (
               this.F[i, 2] != 1 ||
-              ((decimal)this.random.NextDouble()) < 3m * this.s7)
+              ((decimal)this.random.NextDouble()) < 3m * this.oddsOfAmericanScoutPlaneMakingSighting)
             {
               if (
-                ((decimal)this.random.NextDouble()) <= p * this.s7 ||
+                ((decimal)this.random.NextDouble()) <= odds * this.oddsOfAmericanScoutPlaneMakingSighting ||
                 this.F[i, 2] != 0)
               {
                 this.F[i, 2] = Math.Min(this.F[i, 2] + 1, 2);
-                if (((decimal)this.random.NextDouble()) > 3m * this.s7)
+                if (((decimal)this.random.NextDouble()) > 3m * this.oddsOfAmericanScoutPlaneMakingSighting)
                 {
                   this.F[i, 2] = Math.Min(this.F[i, 2] + 1, 2);
                 }
                 switch (this.F[i, 2])
                 {
                   case 1: // generic spot of something by japanese
-                    this.outputText?.Invoke("PBY spots Japanese ships.");
+                    this.output("PBY spots Japanese ships.");
                     spotHappened = true;
                     break;
                   case 2:
@@ -2680,13 +2929,13 @@ namespace MidwayEngine
                     switch (i)
                     {
                       case 0:
-                        this.outputText?.Invoke("PBY spots a Japanese carrier group.");
+                        this.output("PBY spots a Japanese carrier group.");
                         break;
                       case 1:
-                        this.outputText?.Invoke("PBY spots a Japanese troop transport group.");
+                        this.output("PBY spots a Japanese troop transport group.");
                         break;
                       case 2:
-                        this.outputText?.Invoke("PBY spots a Japanese cruiser group.");
+                        this.output("PBY spots a Japanese cruiser group.");
                         break;
                     }
                     break;
@@ -2697,16 +2946,16 @@ namespace MidwayEngine
             {
               if (
                 this.F[i, 2] != 1 ||
-                ((decimal)this.random.NextDouble()) < 3m * this.s8)
+                ((decimal)this.random.NextDouble()) < 3m * this.oddsOfAmericanSubMakingSighting)
               {
                 if (
-                  ((decimal)this.random.NextDouble()) <= p * this.s8 ||
+                  ((decimal)this.random.NextDouble()) <= odds * this.oddsOfAmericanSubMakingSighting ||
                   this.F[i, 2] != 0)
                 {
                   string subName;
 
                   this.F[i, 2] = Math.Min(this.F[i, 2] + 1, 2);
-                  if (((decimal)this.random.NextDouble()) > 3m * this.s8)
+                  if (((decimal)this.random.NextDouble()) > 3m * this.oddsOfAmericanSubMakingSighting)
                   {
                     this.F[i, 2] = Math.Min(this.F[i, 2] + 1, 2);
                   }
@@ -2787,6 +3036,28 @@ namespace MidwayEngine
           }
           if (!onRadar)
           {
+            if (this.F[i, 2] > 0)
+            {
+              int cn;
+
+              cn = this.contactList.IndexOf(i) + 1;
+              if (cn > 0)
+              {
+                if (this.F[i, 2] == 2)
+                {
+                  this.output(
+                    "Contact {0}, {1}, lost in dark and off radar.",
+                    cn,
+                    this.getGenericTaskForceName(i));
+                }
+                else
+                {
+                  this.output(
+                    "Contact {0} lost in dark and off radar.",
+                    cn);
+                }
+              }
+            }
             this.F[i, 2] = 0; // unspot at night
           }
         }
@@ -2800,15 +3071,17 @@ namespace MidwayEngine
       int i;
 
       if (
-        this.t >= 240 &&
-        this.t <= 1140)
+        this.time >= 240 &&
+        this.time <= 1140)
       {
         if (this.F[0, 2] == 2)
         {
           this.F[0, 3] = 2;
         }
-        p = (this.t > 720 && this.t < 780) ? 2 : 1;
-        if (this.allJapaneseCarriersIncapacitated)
+        p = (this.time > 720 && this.time < 780) ? 2 : 1;
+        if (
+          this.allJapaneseCarriersIncapacitated ||
+          this.noJapaneseCarrierStrikePlanes)
         {
           // less likely to be aggressively scouting as much as running
           // Japanese did have 2 seaplane carriers with scout planes so
@@ -2819,21 +3092,21 @@ namespace MidwayEngine
         {
           if (this.F[i, 2] < 2)
           {
-            if (((decimal) this.random.NextDouble()) < p * this.s6)
+            if (((decimal) this.random.NextDouble()) < p * this.oddsOfJapaneseScoutPlaneMakingSighting)
             {
               this.F[i, 2] = 1;
             }
             if (
               this.F[i, 2] == 1 &&
-              ((decimal) this.random.NextDouble()) <= 3m * this.s6)
+              ((decimal) this.random.NextDouble()) <= 3m * this.oddsOfJapaneseScoutPlaneMakingSighting)
             {
               switch(i)
               {
                 case 3:
-                  this.outputText?.Invoke("Japanese scout planes sighted over Task Force 16.");
+                  this.output("Japanese scout planes sighted over Task Force 16.");
                   break;
                 case 4:
-                  this.outputText?.Invoke("Japanese scout planes sighted over Task Force 17.");
+                  this.output("Japanese scout planes sighted over Task Force 17.");
                   break;
               }
               this.F[i, 2] = 2;
@@ -2844,17 +3117,20 @@ namespace MidwayEngine
       }
       else
       {
-        for (i = 3; i < 4; ++i)
+        for (i = 3; i <= 4; ++i)
         {
           this.F[i, 2] = 0;
         }
         this.F[i, 3] = 1;
       }
+      this.UpdateJapaneseCarrierInTheaterAwareness();
     }
 
     private void UpdateIJNCarrierStrikeStatus()
     {
       bool strikeAgainstMidwayInAir;
+      bool escortStrikeExists;
+      bool escortStrikeReady;
       bool strikeExists;
       bool strikeReady;
       int? secondaryStrikeTarget;
@@ -2865,10 +3141,10 @@ namespace MidwayEngine
       int i;
       int j;
 
-      this.s9 = 0;
-      this.a9 = false;
-      this.a8 = false;
-      if (this.t <= 1140)
+      this.japaneseCarrierFleetTarget = 0;
+      this.kidoButaiTarget_EnemyCarriers = false;
+      this.kidoButaiTarget_Midway = false;
+      if (this.time <= 1140)
       {
         strikeExists =
           this.C[0, 5] > 0 || this.C[0, 6] > 0 ||
@@ -2876,10 +3152,17 @@ namespace MidwayEngine
           this.C[2, 5] > 0 || this.C[2, 6] > 0 ||
           this.C[3, 5] > 0 || this.C[3, 6] > 0;
         strikeReady =
-          this.C[0, 5] < 1000 &&
+          strikeExists &&
+          (this.C[0, 5] < 1000 &&
           this.C[1, 5] < 1000 &&
           this.C[2, 5] < 1000 &&
-          this.C[3, 5] < 1000;
+          this.C[3, 5] < 1000);
+        escortStrikeExists =
+          this.C[8, 5] > 0 ||
+          this.C[8, 6] > 0;
+        escortStrikeReady =
+          escortStrikeExists &&
+          this.C[8, 5] < 1000;
         strikeTarget = null;
         secondaryStrikeTarget = null;
         if (
@@ -2934,124 +3217,289 @@ namespace MidwayEngine
           strikeTarget = strikeTarget ?? secondaryStrikeTarget;
           if (strikeTarget != null)
           {
-            this.s9 = (int)this.C[strikeTarget.Value, 0];
+            this.japaneseCarrierFleetTarget = (int)this.C[strikeTarget.Value, 0];
           }
-          if (this.s9 >= 5)
+          if (this.japaneseCarrierFleetTarget >= 5)
           {
             for (i = 0; i < 10; ++i)
             {
-              // checking strikes -- do japanese not launch more than one at a time?
+              // checking strikes -- only 1 strike at a time on Midway
               if (
                 this.S[i, 6] >= 5 &&
                 this.S[i, 9] != -1 &&
                 this.S[i, 1] != -1)
               {
-                this.s9 = 0;
+                this.japaneseCarrierFleetTarget = 0;
                 break;
               }
             }
           }
         }
+        strikeExists =
+          this.C[0, 5] > 0 || this.C[0, 6] > 0 ||
+          this.C[1, 5] > 0 || this.C[1, 6] > 0 ||
+          this.C[2, 5] > 0 || this.C[2, 6] > 0 ||
+          this.C[3, 5] > 0 || this.C[3, 6] > 0;
+        strikeReady =
+          strikeExists &&
+          (this.C[0, 5] < 1000 &&
+          this.C[1, 5] < 1000 &&
+          this.C[2, 5] < 1000 &&
+          this.C[3, 5] < 1000);
         if (this.F[3, 2] + this.F[4, 2] > 0) // IJN has seen carrier force(s)
         {
-          this.a9 = true;
+          if (
+            this.C[4, 8] < 100 ||
+            this.C[5, 8] < 100 ||
+            this.C[6, 8] < 100)
+          {
+            this.kidoButaiTarget_EnemyCarriers = true;
+          }
         }
+
         r = this.CalculateRange(0, 5);
         if (r <= 235M)
         {
           l = 60m * r / 235m;
           if (
-            this.t + l >= 240 &&
-            this.t + l + l <= 1140)
+            this.time + l >= 240 &&
+            this.time + l + l <= 1140)
           {
-            this.a8 = true;
+            this.kidoButaiTarget_Midway = true;
             // original is hiryu < 12 bombers -- I check them all...  old game
             // had things go in order akagi, kaga, soryu, hiryu... order more random
             // in this implementation.
-            this.a9 =
-              (this.C[0, 2] + this.C[0, 5] +
-              this.C[1, 2] + this.C[1, 5] +
-              this.C[2, 2] + this.C[2, 5] +
-              this.C[3, 3] + this.C[3, 5])
-              < 42;
+            if (
+              (this.C[0, 2] + (this.C[0, 5] % 1000) +
+              this.C[1, 2] + (this.C[1, 5] % 1000) +
+              this.C[2, 2] + (this.C[2, 5] % 1000) +
+              this.C[3, 3] + (this.C[3, 5] % 1000))
+              < 42)
+            {
+              // we a bit low on dive bombers -- prefer fleet target
+              // if there are any
+              if (
+                this.C[4, 8] < 100 ||
+                this.C[5, 8] < 100 ||
+                this.C[6, 8] < 100)
+              {
+                this.kidoButaiTarget_EnemyCarriers = true;
+              }
+            }
           }
         }
-        if (this.a9)
+        if (this.kidoButaiTarget_EnemyCarriers)
         {
-          this.a8 = false; // cancelling midway strike due to preference for fleet target
+          this.kidoButaiTarget_Midway = false; // cancelling midway strike due to preference for fleet target
         }
 
-        // consider launch strikes if ready and able
+        if (this.kidoButaiTarget_Midway)
+        {
+          // we are targeting midway now -- make sure we have ground attack ready
+          // 50% enough for first attack
+          if (!this.anyJapaneseCarriersReadyForGroundOffensive)
+          {
+            this.ClearJapaneseSpaceForGroundOffensive();
+          }
+        }
+        else if (this.kidoButaiTarget_EnemyCarriers)
+        {
+          // carrier strike needed -- lets rearm any ground armed forces
+          if (this.anyJapaneseCarriersReadyForGroundOffensive)
+          {
+            this.ClearJapaneseGroundStrikeForCarrierStrike();
+          }
+        }
+
+        // consider launch strikes by Kido Butai if ready and able
         if (
-          this.s9 >= 3 &&
+          this.japaneseCarrierFleetTarget >= 3 &&
+          strikeExists &&
           strikeReady)
         {
+          bool atGround;
+
           // process strike on target task force
           for (j = 0; j < 10; ++j)
           {
             if (this.S[j, 9] == -1)
             {
-              this.S[j, 6] = this.s9;
-              this.S[j, 9] = 0;
-              r = this.CalculateRange(
-                0, s9);
-              l = 60M * r / 235M;
-              this.S[j, 7] = this.d * 1440 + this.t + l;
-              this.S[j, 8] = this.d * 1440 + this.t + l * 2m;
-              this.S[j, 0] = 0;
-              this.S[j, 2] = 0;
-              this.S[j, 4] = 0;
+              int joinedFighters;
+              int joinedBombers;
+              int joinedTorpedoBombers;
+
+              if (this.japaneseCarrierFleetTarget == 5)
+              {
+                this.japaneseHaveLaunchedFirstMidwayRaid = true;
+                atGround = true;
+              }
+              else
+              {
+                atGround = false;
+              }
+              joinedFighters = 0;
+              joinedBombers = 0;
+              joinedTorpedoBombers = 0;
               // add all carrier strikes to strike group
               for (i = 0; i <= 3; ++i)
               {
-                if (this.C[i, 8] <= 60)
+                // if carrier is healthy enough and prepared for this
+                // type of strike, it joins in.
+                if (
+                  this.C[i, 8] < 60 &&
+                  this.armedForGroundAttack[i] == atGround)
                 {
                   Debug.Assert(
                     (this.C[i, 5] >= 0 &&
                     this.C[i, 5] < 300) ||
                     (this.C[i, 5] >= 1000 &&
                     this.C[i, 5] < 1300));
-                  this.S[j, 0] += this.C[i, 4];
+                  joinedFighters += (int) this.C[i, 4];
                   this.C[i, 4] = 0;
-                  this.S[j, 2] += this.C[i, 5];
+                  joinedBombers += (int) this.C[i, 5] % 1000;
                   this.C[i, 5] = 0;
-                  this.S[j, 4] += this.C[i, 6];
+                  joinedTorpedoBombers += (int) this.C[i, 6];
                   this.C[i, 6] = 0;
                 }
               }
-              if (this.showJapaneseLaunches)
+              if (joinedBombers + joinedTorpedoBombers > 0)
               {
-                this.outputText?.Invoke(
-                  string.Format(
+                this.S[j, 6] = this.japaneseCarrierFleetTarget;
+                this.S[j, 9] = 0;
+                r = this.CalculateRange(
+                  0, japaneseCarrierFleetTarget);
+                l = 60M * r / 235M;
+                this.S[j, 7] = this.day * 1440 + this.time + l;
+                this.S[j, 8] = this.day * 1440 + this.time + l * 2m;
+                this.S[j, 0] = joinedFighters;
+                this.S[j, 2] = joinedBombers;
+                this.S[j, 4] = joinedTorpedoBombers;
+                if (this.showJapaneseLaunches)
+                {
+                  this.output(
                     "Japanese carriers launch strike of {0} zeros, {1} vals, and {2} kates at {3}.",
                     this.S[j, 0],
                     this.S[j, 2],
                     this.S[j, 4],
-                    this.getTaskForceName(this.s9)));
+                    this.getTaskForceName(this.japaneseCarrierFleetTarget));
+                }
+                if (this.S[j, 2] + this.S[j, 4] == 0m)
+                {
+                  this.S[j, 9] = -1;
+                }
+                this.S[j, 3] = 1;
+                this.S[j, 5] = 0;
+                this.S[j, 10] = 0;
+                if (this.S[j, 9] != -1)
+                {
+                  this.S[j, 1] =
+                    (((double)(this.S[j, 2] / (this.S[j, 2] + this.S[j, 4]))) > this.random.NextDouble()) ? 1 : 0;
+                }
               }
-              if (this.S[j, 2] + this.S[j, 4] == 0m)
+              else
               {
-                this.S[j, 9] = -1;
-              }
-              this.S[j, 3] = 1;
-              this.S[j, 5] = 0;
-              if (this.S[j, 9] != -1)
-              {
-                this.S[j, 1] =
-                  (((double) (this.S[j, 2] / (this.S[j, 2] + this.S[j, 4]))) > this.random.NextDouble()) ? 1 : 0;
               }
               break;
             }
           }
-        }        
+        }
+        // consider launches by zuiho
+        if (
+          escortStrikeExists &&
+          escortStrikeReady)
+        {
+          List<int> targets;
+
+          targets = new List<int>();
+          if (this.armedForGroundAttack[8])
+          {
+            if (
+              this.CalculateRange(1, 5) < 100m &&
+              this.C[5, 8] < 100)
+            {
+              targets.Add(5);
+            }
+          }
+          else
+          {
+            if (
+              (this.F[3, 2] == 2 &&
+              (this.C[4, 8] < 100 ||
+              this.C[5, 8] < 100) &&
+              this.CalculateRange(1, 3) < 160m))
+            {
+              targets.Add(3);
+            }
+            if (
+              (this.F[4, 2] == 2 &&
+              this.C[5, 8] < 100 &&
+              this.CalculateRange(1, 4) < 160m))
+            {
+              targets.Add(4);
+            }
+          }
+          if (targets.Any())
+          {
+            int ttf;
+
+            ttf = targets
+              .OrderBy(
+                t =>
+                  this.random.NextDouble())
+              .First();
+            for (j = 0; j < 10; ++j)
+            {
+              if (this.S[j, 9] == -1)
+              {
+                this.S[j, 6] = ttf;
+                this.S[j, 9] = 8;
+                r = this.CalculateRange(
+                  0, ttf);
+                l = 60M * r / 235M;
+                this.S[j, 7] = this.day * 1440 + this.time + l;
+                this.S[j, 8] = this.day * 1440 + this.time + l * 2m;
+                this.S[j, 0] = this.C[8, 4];
+                this.S[j, 2] = this.C[8, 5] % 1000;
+                this.S[j, 4] = this.C[8, 6];
+                this.C[8, 4] = 0;
+                this.C[8, 5] = 0;
+                this.C[8, 6] = 0;
+                if (this.showJapaneseLaunches)
+                {
+                  this.output(
+                    "Japanese Zuiho launches strike of {0} zeros, {1} vals, and {2} kates at {3}.",
+                    this.S[j, 0],
+                    this.S[j, 2],
+                    this.S[j, 4],
+                    this.getTaskForceName(ttf));
+                }
+                if (this.S[j, 2] + this.S[j, 4] == 0m)
+                {
+                  this.S[j, 9] = -1;
+                }
+                this.S[j, 10] = 0;
+                this.S[j, 3] = 1;
+                this.S[j, 5] = 0;
+                if (this.S[j, 9] != -1)
+                {
+                  this.S[j, 1] =
+                    (((double)(this.S[j, 2] / (this.S[j, 2] + this.S[j, 4]))) > this.random.NextDouble()) ? 1 : 0;
+                }
+                break;
+              }
+            }
+          }
+        }
 
         // arm strikes?
-        for (i = 0; i <= 3; ++i)
+        for (i = 0; i <= 8; i = (i == 8) ? 9 : ((i < 3) ? (i + 1) : 8))
         {
           this.C[i, 5] %= 1000; // finish arming any pending strike preps
           Debug.Assert(this.C[i, 5] < 300);
-          if (this.C[i, 8] <= 60)
+          if (this.C[i, 8] < 60)
           {
+            bool armForGroundAttack;
+            bool standPat;
             int allFs;
             int allBs;
             int allTs;
@@ -3060,65 +3508,245 @@ namespace MidwayEngine
             int armBs;
             int armTs;
 
+            armForGroundAttack = false;
             allFs = (int)(this.C[i, 4] + this.C[i, 1] + this.C[i, 7]);
             allBs = (int)((this.C[i, 5] % 1000) + this.C[i, 2]);
             Debug.Assert(allBs < 200);
             allTs = (int)(this.C[i, 6] + this.C[i, 3]);
-            if (this.a9)
+            armFs = 0;
+            armBs = 0;
+            armTs = 0;
+            standPat = false; 
+            if (i <= 3)
             {
-              // carrier strike -- the kitchen sink
-              // changing this to keep 1/6th of fighters as CAP
-              armFs = allFs * 5 / 6;
-              armBs = allBs;
-              armTs = allTs;
-            }
-            else if (this.a8)
-            {
-              // midway strike -- take about half bombers and a fraction of fighters
-              armFs = (allFs + 3) / 4;
-              armBs = (allBs + 1) / 2;
-              armTs = (allTs + 1) / 2;
+              if (this.kidoButaiTarget_EnemyCarriers)
+              {
+                // carrier strike -- the kitchen sink
+                // changing this to keep 1/6th of fighters as CAP
+                armFs = allFs * 5 / 6;
+                armBs = allBs;
+                armTs = allTs;
+                armForGroundAttack = false;
+              }
+              else if (this.kidoButaiTarget_Midway)
+              {
+                // midway strike -- take about half bombers and a fraction of fighters
+                armFs = (allFs + 3) / 4;
+                armBs = (allBs + 1) / 2;
+                armTs = (allTs + 1) / 2;
+                armForGroundAttack = true;
+              }
+              else
+              {
+                standPat = true;
+              }
             }
             else
             {
-              armFs = 0;
-              armBs = 0;
-              armTs = 0;
-            }
-            Debug.Assert(armBs < 200);
-            capFs = allFs - armFs;
-            this.C[i, 1] = 0;
-            this.C[i, 2] = allBs - armBs;
-            this.C[i, 3] = allTs - armTs;
-            if (
-              this.C[i, 4] != armFs ||
-              this.C[i, 5] != armBs ||
-              this.C[i, 6] != armTs)
-            {
-              this.C[i, 4] = armFs;
-              this.C[i, 5] = armBs;
-              Debug.Assert(this.C[i, 5] < 300);
-              this.C[i, 6] = armTs;
-              if (armFs + armBs + armTs > 0)
+              // zuiho generally not involved, but if japanese carriers are screwed or out of range and target in reach
+              // zuiho is with transports so won't be chasing TF16/17 but might strike if they approach it's home group
+              // of the transports
+              if (
+                (this.F[3, 2] == 2 &&
+                (this.C[4, 8] < 100 ||
+                this.C[5, 8] < 100) &&
+                this.CalculateRange(1, 3) < 160m) ||
+                (this.F[4, 2] == 2 &&
+                this.C[5, 8] < 100 &&
+                this.CalculateRange(1, 4) < 160m))
               {
-                this.C[i, 5] = (((int)this.C[i, 5]) % 1000) + 1000;
-                Debug.Assert(
-                  this.C[i, 5] >= 1000 &&
-                  this.C[i, 5] < 1300);
+                // zuiho close to carrier(s) by chance... arm for carrier strike
+                armFs = allFs * 3 / 5;
+                armBs = allBs;
+                armTs = allTs;
+                armForGroundAttack = false;
+              }
+              else if (
+                this.CalculateRange(1, 5) < 100m &&
+                this.C[5, 8] < 70)
+              {
+                // zuiho near midway which is operational or close to it
+                armFs = allFs * 2 / 3;
+                armBs = allBs;
+                armTs = allTs;
+                armForGroundAttack = true;
+              }
+              else
+              {
+                standPat = true;
               }
             }
-            this.C[i, 7] = allFs - armFs;
+            if (!standPat)
+            {
+              Debug.Assert(armBs < 200);
+              capFs = allFs - armFs;
+              this.C[i, 1] = 0;
+              this.C[i, 2] = allBs - armBs;
+              this.C[i, 3] = allTs - armTs;
+              if (
+                this.C[i, 4] != armFs ||
+                this.C[i, 5] != armBs ||
+                this.C[i, 6] != armTs ||
+                this.armedForGroundAttack[i] != armForGroundAttack)
+              {
+                this.C[i, 4] = armFs;
+                this.C[i, 5] = armBs;
+                Debug.Assert(this.C[i, 5] < 300);
+                this.C[i, 6] = armTs;
+                this.armedForGroundAttack[i] = armForGroundAttack;
+                if (armFs + armBs + armTs > 0)
+                {
+                  this.C[i, 5] = (((int)this.C[i, 5]) % 1000) + 1000;
+                  Debug.Assert(
+                    this.C[i, 5] >= 1000 &&
+                    this.C[i, 5] < 1300);
+                }
+              }
+              this.C[i, 7] = Math.Min(allFs - armFs, 10);
+            }
+            else
+            {
+              if (this.C[i, 1] > 0)
+              {
+                int zeros;
+                int cap;
+
+                // no strike pending so put our hangar fighters into the CAP
+                // per research online.. see CAP attacking incoming fighters to number over 30 over carriers... limiting to 10 per carrier for now
+                zeros = (int)(this.C[i, 7] + this.C[i, 1]);
+                cap = Math.Min(zeros, 10);
+                this.C[i, 1] = zeros - cap;
+                this.C[i, 7] = cap;
+              }
+            }
             /*
             if (
-              this.s9 == 0 &&
-              !this.a8 &&
-              !this.a9)
+              this.japaneseCarrierFleetTarget == 0 &&
+              !this.kidoButaiTarget_Midway &&
+              !this.kidoButaiTarget_EnemyCarriers)
             {
               // no targets -- so get all our fighters into the CAP
               this.C[i, 7] += this.C[i, 1];
               this.C[i, 1] = 0;
             }
             */
+          }
+        }
+      }
+    }
+
+    private bool anyJapaneseCarriersReadyForGroundOffensive
+    {
+      get
+      {
+        bool ret;
+        int i;
+
+        ret = false;
+        for (i = 0; i < 4; ++i)
+        {
+          if (
+            this.C[i, 8] < 60 &&
+            ((this.C[i, 5] % 1000) + this.C[i, 6]) > 0m &&
+            this.armedForGroundAttack[i])
+          {
+            ret = true;
+            break;
+          }
+        }
+        return ret;
+      }
+    }
+
+    private void ClearJapaneseSpaceForGroundOffensive()
+    {
+      int keepCarrierCapable;
+      int carriersAvailable;
+      int clearForGround;
+      int carrierArmed;
+      List<int> c_idxs;
+      int i;
+
+      c_idxs = new List<int>();
+      carriersAvailable = 0;
+      for(i = 0; i <= 3; ++i)
+      {
+        // carriers undamaged with at least 6 strike type planes
+        if (
+          this.C[i, 8] < 60 &&
+          this.C[i, 2] + (this.C[i, 5] % 1000) + this.C[i, 3] + this.C[i, 6] > 6m)
+        {
+          ++carriersAvailable;
+          c_idxs.Add(i);
+        }
+      }
+      if (this.japaneseKnowAmericaCarriersInArea)
+      {
+        keepCarrierCapable = (carriersAvailable + 1) / 2;
+      }
+      else if (!this.japaneseHaveLaunchedFirstMidwayRaid)
+      {
+        keepCarrierCapable = carriersAvailable / 2;
+      }
+      else
+      {
+        // Japanese, after failing to incapacitate Midway were
+        // converting their 50% reserved for carrier battle (per Yamamoto orders)
+        // to attack midway
+        keepCarrierCapable = 0;
+      }
+      carrierArmed = 0;
+      for (i = 0; i < 4; ++i)
+      {
+        if (!this.armedForGroundAttack[i])
+        {
+          ++carrierArmed;
+        }
+      }
+      clearForGround = Math.Max(0, carrierArmed - keepCarrierCapable);
+      c_idxs = c_idxs
+        .OrderBy(
+          c =>
+            this.random.NextDouble())
+        .ToList();
+      if (clearForGround > 0)
+      {
+        foreach (int cid in c_idxs)
+        {
+          if (!this.armedForGroundAttack[cid])
+          {
+            this.ClearJapaneseCarrierStrike(cid);
+            --clearForGround;
+            if (clearForGround <= 0)
+            {
+              // that's enough
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    private void ClearJapaneseCarrierStrike(int c)
+    {
+      this.C[c, 1] = this.C[c, 1] + this.C[c, 4];
+      this.C[c, 4] = 0;
+      this.C[c, 2] = this.C[c, 2] + (this.C[c, 5] % 1000);
+      this.C[c, 5] = 0;
+      this.C[c, 3] = this.C[c, 3] + this.C[c, 6];
+      this.C[c, 6] = 0;
+      this.armedForGroundAttack[c] = false;
+    }
+
+    private void ClearJapaneseGroundStrikeForCarrierStrike()
+    {
+      for (int i = 0; i <= 4; ++i)
+      {
+        if (this.C[i, 8] < 60)
+        {
+          if (this.armedForGroundAttack[i])
+          {
+            this.ClearJapaneseCarrierStrike(i);
           }
         }
       }
@@ -3162,7 +3790,9 @@ namespace MidwayEngine
           }
         }
       }
-      if (this.allJapaneseCarriersIncapacitated)
+      if (
+        this.allJapaneseCarriersIncapacitated ||
+        this.noJapaneseCarrierStrikePlanes)
       {
         c = 270;
       }
@@ -3205,21 +3835,21 @@ namespace MidwayEngine
       r = this.CalculateRange(2, 5);
       if (
         r <= 15 &&
-        this.c5 < 10)
+        this.cruiserGroupLosses < 10)
       {
         double rn;
         int n;
         int h;
         int k;
 
-        this.outputText?.Invoke("Japanese Cruisers are bombarding Midway!!!");
+        this.output("Japanese Cruisers are bombarding Midway!!!");
         // cruisers bombard
         //x = 7;
         this.F[2, 2] = 2;
-        ++this.c5;
+        ++this.cruiserGroupLosses;
         if (
           !this.allJapaneseCarriersIncapacitated &&
-          this.c7 <= 255)
+          this.cruiserGroupDamages <= 255)
         {
           this.F[2, 5] = 0;
         }
@@ -3231,7 +3861,7 @@ namespace MidwayEngine
         this.interruptTimeAdvancement = true;
         n = 0;
         h = 0;
-        for (k = this.c7; k < 255; k += 4)
+        for (k = this.cruiserGroupDamages; k < 255; k += 4)
         {
           rn = this.random.NextDouble();
           if (rn < 0.05)
@@ -3448,6 +4078,41 @@ namespace MidwayEngine
       }
     }
 
+    private void ApplyExplosionDamages(
+      bool japanese,
+      int vessel)
+    {
+      if (this.C[vessel, 8] < 100)
+      {
+        int planesDestroyed;
+        bool targetGone;
+
+        targetGone = false;
+        planesDestroyed = 0;
+        this.ApplyDamage(
+          vessel,
+          this.random.Next(10, 20),
+          ref targetGone,
+          ref planesDestroyed);
+        if (
+          planesDestroyed > 0 &&
+          !targetGone)
+        {
+          if (!japanese)
+          {
+            this.output(
+              "{0} of {1}'s planes {2} were significantly damaged in the {3}.",
+              planesDestroyed,
+              this.vessels[vessel],
+              (planesDestroyed == 1) ? "was" : "were",
+              (vessel == 7) ?
+                "fire" :
+                "explosion");
+          }
+        }
+      }
+    }
+
     private PlaneTypes getPlaneType(
       int fighterCount,
       int bomberCount,
@@ -3504,7 +4169,7 @@ namespace MidwayEngine
         int l1;
         int l2;
 
-        lc = 6 - this.intVal(this.t < 240 || this.t > 1140); // damage to planes including CAP if at night
+        lc = 6 - this.intVal(this.time < 240 || this.time > 1140); // damage to planes including CAP if at night
         for (l1 = 1; l1 <= lc; ++l1)
         {
           if (this.C[carrier, l1] != 0)
@@ -3534,7 +4199,7 @@ namespace MidwayEngine
         Debug.Assert(this.C[carrier, 5] < 300);
         this.C[carrier, 1] += this.C[carrier, 4];
         this.C[carrier, 4] = 0;
-        this.C[carrier, 2] += this.C[carrier, 5];
+        this.C[carrier, 2] += this.C[carrier, 5] % 1000;
         this.C[carrier, 5] = 0;
         this.C[carrier, 3] += this.C[carrier, 6];
         this.C[carrier, 6] = 0;
@@ -3625,7 +4290,7 @@ namespace MidwayEngine
             this.random.Next(3),
             this.random.Next(3));
       }
-      tb = this.d * 1440 + this.t + delay;
+      tb = this.day * 1440 + this.time + delay;
       this.recoveringCAPs.Add(
         new RecoveringCAP
         {
@@ -3634,7 +4299,7 @@ namespace MidwayEngine
           tfHome = tfHome,
           tfDest = tfHome,
           capHomeVessels = capHomeVessels,
-          timeBack = this.d * 1440 + this.t,
+          timeBack = this.day * 1440 + this.time,
           attempt = 1
         });
       for (i = 0; i <= 8; ++i)
@@ -3655,7 +4320,7 @@ namespace MidwayEngine
       for (i = this.recoveringCAPs.Count - 1; i >= 0; --i)
       {
         recoveringCAP = this.recoveringCAPs[i];
-        if (recoveringCAP.timeBack < this.d * 1440 + this.t)
+        if (recoveringCAP.timeBack < this.day * 1440 + this.time)
         {
           this.recoveringCAPs.RemoveAt(i);
           this.RecoverCAP(recoveringCAP);
@@ -3700,7 +4365,7 @@ namespace MidwayEngine
             spots =
               80 -
               (int) (this.C[i, 1] + this.C[i, 2] + this.C[i, 3] +
-              this.C[i, 4] + this.C[i, 5] + this.C[i, 6]);
+              this.C[i, 4] + (this.C[i, 5] % 1000) + this.C[i, 6]);
             if (spots > 0)
             {
               availableSlots[i] = spots;
@@ -3713,7 +4378,9 @@ namespace MidwayEngine
 
           for (; ;)
           {
-            if (availableSlots.Any())
+            if (
+              availableSlots.Any() &&
+              left > 0)
             {
               pick = this.random.Next(availableSlots.Count);
               slotRef = availableSlots.ElementAt(pick);
@@ -3776,25 +4443,26 @@ namespace MidwayEngine
                 this.recoveringCAPs.Add(recoveringCAP);
                 if (!recoveringCAP.japanese)
                 {
-                  this.outputText?.Invoke(
-                    string.Format(
-                      "{0} of {1}'s CAP {2} attempt to divert to {3}.",
-                      recoveringCAP.capCount,
-                      this.getTaskForceName(recoveringCAP.tfHome),
-                      this.planes[0, 0],
-                      this.getTaskForceName(recoveringCAP.tfDest)));
+                  this.output(
+                    "{0} of {1}'s CAP {2} attempt to divert to {3}.",
+                    recoveringCAP.capCount,
+                    this.getTaskForceName(recoveringCAP.tfHome),
+                    this.planes[0, 0],
+                    this.getTaskForceName(recoveringCAP.tfDest));
                 }
               }
               else
               {
                 if (!recoveringCAP.japanese)
                 {
-                  this.outputText?.Invoke(
-                    string.Format(
-                      "{0} of {1}'s CAP {2} run out of fuel and splash.",
-                      left,
-                      this.getTaskForceName(recoveringCAP.tfHome),
-                      this.planes[0, 0]));
+                  this.output(
+                    "{0} of {1}'s CAP {2} run out of fuel and {3}.",
+                    left,
+                    this.getTaskForceName(recoveringCAP.tfHome),
+                    this.planes[0, 0],
+                    (recoveringCAP.tfHome == 5) ?
+                      "crash-land" :
+                      "splash");
                 }
               }
             }
@@ -3802,21 +4470,20 @@ namespace MidwayEngine
             {
               if (!recoveringCAP.japanese)
               {
-                this.outputText?.Invoke(
-                  string.Format(
-                    "{0} of {1}'s {2} {3}{4}.",
-                    left,
-                    this.getTaskForceName(recoveringCAP.tfHome),
-                    (left == 1) ?
-                      this.plane[0, 0] :
-                      this.planes[0, 0],
-                    (recoveringCAP.tfDest == 5) ?
-                      (left == 1) ? "crashlands on Midway Island" : "crashland on Midway Island" :
-                      (left == 1) ? "splashes into the sea" : "splash into the sea",
-                    (recoveringCAP.tfDest != recoveringCAP.tfHome &&
-                    recoveringCAP.tfDest != 5) ?
-                      " after arriving at " + this.getTaskForceName(recoveringCAP.tfDest) :
-                      ""));
+                this.output(
+                  "{0} of {1}'s {2} {3}{4}.",
+                  left,
+                  this.getTaskForceName(recoveringCAP.tfHome),
+                  (left == 1) ?
+                    this.plane[0, 0] :
+                    this.planes[0, 0],
+                  (recoveringCAP.tfDest == 5) ?
+                    (left == 1) ? "crash-lands on Midway Island" : "crash-land on Midway Island" :
+                    (left == 1) ? "splashes into the sea" : "splash into the sea",
+                  (recoveringCAP.tfDest != recoveringCAP.tfHome &&
+                  recoveringCAP.tfDest != 5) ?
+                    " after arriving at " + this.getTaskForceName(recoveringCAP.tfDest) :
+                    "");
               }
             }
           }
@@ -3832,12 +4499,16 @@ namespace MidwayEngine
       {
         if (this.S[i, 9] != -1)
         {
-          if (this.d * 1440 + this.t > this.S[i, 8])
+          if (this.day * 1440 + this.time > this.S[i, 8])
           {
             this.S[i, 8] = -Math.Abs(this.S[i, 8]);
             if (this.S[i, 9] < 4)
             {
               this.LandJapaneseStrike(i);
+            }
+            else if (this.S[i, 9] == 8)
+            {
+              this.LandZuihoStrike(i);
             }
             else
             {
@@ -3875,7 +4546,7 @@ namespace MidwayEngine
       };
       for (i = 0; i < 4; ++i)
       {
-        if (this.C[i, 8] <= 60)
+        if (this.C[i, 8] < 60)
         {
           carriers.Add(i);
         }
@@ -3907,6 +4578,19 @@ namespace MidwayEngine
       }
     }
 
+    private void LandZuihoStrike(int si)
+    {
+      int c;
+
+      c = (int)this.S[si, 9];
+      if (this.C[c, 8] < 60m)
+      {
+        this.C[c, 1] += this.S[si, 0];
+        this.C[c, 2] += this.S[si, 2];
+        this.C[c, 3] += this.S[si, 4];
+      }
+    }
+
     private void LandAmericanStrike(int si)
     {
       int planesLeft;
@@ -3920,7 +4604,7 @@ namespace MidwayEngine
           this.S[si, 4]);
       if (planesLeft > 0)
       {
-        if (this.C[c, 8] <= 60m)
+        if (this.C[c, 8] < 60m)
         {
           this.output(
             "Strike landing on {0}.",
@@ -3940,14 +4624,14 @@ namespace MidwayEngine
           carriersUsed = new SortedSet<int>();
           if (
             c == 4 &&
-            this.C[5, 8] <= 60)
+            this.C[5, 8] < 60)
           {
             // divert to hornet
             carriersTo.Add(5);
           }
           else if (
             c == 5 &&
-            this.C[4, 8] <= 60)
+            this.C[4, 8] < 60)
           {
             // divert to Enterprise
             carriersTo.Add(4);
@@ -3984,7 +4668,7 @@ namespace MidwayEngine
                 {
                   if (
                     this.C[j, 0] == tfOption &&
-                    this.C[j, 8] <= 60m)
+                    this.C[j, 8] < 60m)
                   {
                     carriersTo.Add(j);
                   }
@@ -4031,14 +4715,17 @@ namespace MidwayEngine
           else
           {
             this.output(
-              "{0}'s strike force of {1} {2} splashes!",
+              "{0}'s strike force of {1} {2} {3}!",
               this.vessels[c],
               planesLeft,
               this.strikePlaneTypesList(
                 false,
                 this.S[si, 0] > 0,
                 this.S[si, 2] > 0,
-                this.S[si, 4] > 0));
+                this.S[si, 4] > 0),
+              (c == 7) ?
+               "crash-lands" :
+               "splashes");
           }
         }
       }
@@ -4081,7 +4768,14 @@ namespace MidwayEngine
       {
         if (i == count - 1)
         {
-          sb.Append(", and ");
+          if (i > 1)
+          {
+            sb.Append(", and ");
+          }
+          else if (i > 0)
+          {
+            sb.Append(" and ");
+          }
         }
         else if (i > 0)
         {
@@ -4240,12 +4934,464 @@ namespace MidwayEngine
 
     private void ProcessDamageControl()
     {
+      this.ProcessJapaneseDamageControl();
+      this.ProcessUSDamageControl();
+    }
 
+    private void ProcessJapaneseDamageControl()
+    {
+      int i;
+
+      for (i = 0; i <= 8; ++i)
+      {
+        if (this.C[i, 0] < 3)
+        {
+          // japanese vessel
+          if (this.C[i, 8] >= 10 && this.C[i, 8] < 100)
+          {
+            decimal odds;
+            decimal rnd;
+
+            rnd = (decimal)this.random.NextDouble();
+            odds =
+              0.09m +
+              (this.C[i, 8] / 100) * 0.28m;
+            if (rnd < odds)
+            {
+              this.output(
+                "Explosion heard from the vicinity of the {0}!",
+                this.vessels[i]);
+              this.ApplyExplosionDamages(
+                true,
+                i);
+            }                        
+          }
+          if (this.C[i, 8] < 100)
+          {
+            decimal repair;
+
+            repair =
+              ((decimal)this.random.NextDouble()) *
+              0.66m;
+            this.C[i, 8] = Math.Max(0m, this.C[i, 8] - repair);
+          }
+        }
+      }
+    }
+
+    private void ProcessUSDamageControl()
+    {
+      int i;
+
+      for (i = 0; i <= 8; ++i)
+      {
+        if (this.C[i, 0] >= 3)
+        {
+          // US vessel
+          if (this.C[i, 8] >= 10 && this.C[i, 8] < 100)
+          {
+            decimal odds;
+            decimal rnd;
+
+            // US had better safety measures and better results from dmg control / prevention than Japanese
+            // so these odds are significantly lower.
+            rnd = (decimal)this.random.NextDouble();
+            odds =
+              0.044m +
+              (this.C[i, 8] / 100) * 0.014m;
+            if (rnd < odds)
+            {
+              if (i == 7)
+              {
+                this.output(
+                  "Fires rage on Midway!");
+              }
+              else
+              {
+                this.output(
+                  "Explosion on board the {0}!",
+                  this.vessels[i]);
+              }
+              this.ApplyExplosionDamages(
+                false,
+                i);
+            }
+          }
+          if (this.C[i, 8] < 100)
+          {
+            bool wasOperational;
+            bool nowOperational;
+            decimal repair;
+
+            wasOperational = this.C[i, 8] < 60;
+            repair =
+              ((decimal)this.random.NextDouble()) *
+              1.4m;
+            this.C[i, 8] = Math.Max(0m, this.C[i, 8] - repair);
+            nowOperational = this.C[i, 8] < 60;
+            if (
+              nowOperational &&
+              !wasOperational)
+            {
+              this.output(
+                "Damage control teams have restored {0} to operational status.",
+                this.vessels[i]);
+            }
+          }
+        }
+      }
     }
 
     private void CheckForGameCompletion()
     {
+      if (
+        !this.AnyStrikesOut &&
+        ((this.allJapaneseCarriersIncapacitated &&
+        this.F[0, 0] < 0m) ||
+        this.allJapaneseCarriersSunk ||
+        this.allUSCarrierForcesLeft ||
+        this.allUSBasesDestroyed ||
+        this.allUSAirForcesDestroyed ||
+        this.allUSAirForcesDestroyed))
+      {
+        this.gameOver = true;
+        this.output(
+          "{0} US planes lost",
+          this.usPlanesLost);
+        this.output(
+          "{0} Japanese planes lost.",
+          this.japanesePlanesLost);
+        this.output(
+          "{0} US victory points.",
+          this.victoryPointsUS);
+        this.output(
+          "{0} Japanese victory points.",
+          this.victoryPointsJapan);
+        this.output(
+          "{0} final score.",
+          this.victoryPoints);
+      }
+    }
 
+    private bool allUSBasesDestroyed
+    {
+      get
+      {
+        bool ret;
+        int i;
+
+        ret = true;
+        for (i = 4; i <= 7; ++i)
+        {
+          if (this.C[i, 8] < 100)
+          {
+            ret = false;
+            break;
+          }
+        }
+        return ret;
+      }
+    }
+
+    private bool allUSAirForcesDestroyed
+    {
+      get
+      {
+        bool ret;
+        int i;
+
+        ret = true;
+        for (i = 0; i < 10; ++i)
+        {
+          if (
+            this.S[i, 9] != -1 &&
+            this.C[(int) this.S[i, 9], 0] >= 3)
+          {
+            ret = false;
+            break;
+          }
+        }
+        if (ret)
+        {
+          // no us planes en route on strikes
+          for (i = 4; i <= 7; ++i)
+          {
+            if (
+              this.C[i, 8] < 100 &&
+              ((int) 
+              (this.C[i, 1] +
+              this.C[i, 2] +
+              this.C[i, 3] +
+              this.C[i, 4] +
+              (this.C[i, 5] % 1000) +
+              this.C[i, 6] +
+              this.C[i, 7])) > 0)
+            {
+              // carrier afloat with planes on board
+              ret = false;
+              break;
+            }
+          }
+        }
+        return ret;
+      }
+    }
+
+    private bool allJapaneseCarriersSunk
+    {
+      get
+      {
+        bool ret;
+        int i;
+
+        ret = true;
+        for (i = 0; i <= 3; ++i)
+        {
+          if (this.C[i, 8] < 100)
+          {
+            ret = false;
+            break;
+          }
+        }
+        return ret;
+      }
+    }
+
+    private bool allUSCarrierForcesLeft
+    {
+      get
+      {
+        bool ret;
+
+        ret =
+          this.F[3, 0] > 1150m &&
+          this.F[4, 0] > 1150m;
+        // original game ended if either escaped east...
+        // doesn't make sense to me as one might be crippled and leave
+        // while the other still is a force to be reckoned with.
+        return ret;
+      }
+    }
+
+    private bool AnyStrikesOut
+    {
+      get
+      {
+        bool ret;
+        int i;
+
+        ret = false;
+        for (i = 0; i < 10; ++i)
+        {
+          if (this.S[i, 9] != -1)
+          {
+            ret = true;
+            break;
+          }
+        }
+        return ret;
+      }
+    }
+
+    private int getPlanesLost(bool japanese)
+    {
+      int planesAtStart;
+      int planesNow;
+      int ret;
+      int i;
+
+      planesAtStart = 0;
+      planesNow = 0;
+      for (i = 0; i <= 8; ++i)
+      {
+        if (
+          (this.C[i, 0] <= 3 && japanese) ||
+          (this.C[i, 0] > 3 && !japanese))
+        {
+          planesAtStart +=
+            (int)
+              (this.COriginal[i, 1] +
+              this.COriginal[i, 2] +
+              this.COriginal[i, 3] +
+              this.COriginal[i, 4] +
+              this.COriginal[i, 5] +
+              this.COriginal[i, 6] +
+              this.COriginal[i, 7]);
+          if (this.C[i, 8] < 100m)
+          {
+            if (
+              i != 7 ||
+              !this.midwayIsFallen)
+            {
+              planesNow +=
+                (int)
+                  (this.C[i, 1] +
+                  this.C[i, 2] +
+                  this.C[i, 3] +
+                  this.C[i, 4] +
+                  (this.C[i, 5] % 1000) +
+                  this.C[i, 6] +
+                  this.C[i, 7]);
+            }
+          }
+        }
+      }
+      ret = planesAtStart - planesNow;
+      Debug.Assert(ret >= 0);
+      ret = Math.Max(0, ret);
+      return ret;
+    }
+
+    public int japanesePlanesLost => this.getPlanesLost(true);
+    public int usPlanesLost => this.getPlanesLost(false);
+
+    // original game apparently just considers midway fallen if japanese carriers functioning at the end
+    // guess if they are, then only way we got here is all us bases gone or us evacuated the theater.
+    public bool midwayIsFallen => !this.allJapaneseCarriersIncapacitated;
+    public int victoryPoints
+    {
+      get
+      {
+        int points;
+        int vp;
+        int i;
+
+        vp = 0;
+        // add carrier damage points
+        for (i = 0; i<= 8; ++i)
+        {
+          if (this.C[i, 8] > 0m)
+          {
+            if (this.C[i, 8] >= 100)
+            {
+              points = 1000;
+            }
+            else if (this.C[i, 8] >= 60)
+            {
+              points = 300;
+            }
+            else
+            {
+              points = 100;
+            }
+          }
+          else
+          {
+            points = 0;
+          }
+          if (i == 8)
+          {
+            // half points for the small escort carrier
+            points /= 2;
+          }
+          if (this.C[i, 0] <= 2)
+          {
+            // japanese carrier damage -- + points
+            vp += points;
+          }
+          else
+          {
+            // us carrier damage -- - points
+            vp -= points;
+          }
+        }
+        // +5 points for each japanese plane taken out
+        vp += this.japanesePlanesLost * 5;
+        // -5 points for each US plan we lost
+        vp -= this.usPlanesLost * 5;
+        if (this.midwayIsFallen)
+        {
+          vp -= 1000;
+        }
+        vp -= this.victoryPointsJapan;
+        vp += this.victoryPointsUS;
+        return vp;
+      }
+    }
+
+    public bool zuihoTouched => this.C[8, 8] > 0m;
+
+    public string stateOf(AirBases airBase)
+    {
+      string ret;
+
+      switch(airBase)
+      {
+        case AirBases.Akagi:
+          ret = this.stateOf(0);
+          break;
+        case AirBases.Kaga:
+          ret = this.stateOf(1);
+          break;
+        case AirBases.Soryu:
+          ret = this.stateOf(2);
+          break;
+        case AirBases.Hiryu:
+          ret = this.stateOf(3);
+          break;
+        case AirBases.Enterprise:
+          ret = this.stateOf(4);
+          break;
+        case AirBases.Hornet:
+          ret = this.stateOf(5);
+          break;
+        case AirBases.Yorktown:
+          ret = this.stateOf(6);
+          break;
+        case AirBases.Midway:
+          ret = this.stateOf(7);
+          if (this.midwayIsFallen)
+          {
+            ret += " (Captured)";
+          }
+          break;
+        case AirBases.Zuiho:
+          ret = this.stateOf(8);
+          break;
+        default:
+          ret = string.Empty;
+          break;
+      }
+      return ret;
+    }
+
+    public string stateOf(int c)
+    {
+      decimal dmg;
+      string ret;
+
+      dmg = this.C[c, 8];
+      if (dmg > 0m)
+      {
+        if (dmg >= 60)
+        {
+          if (dmg >= 100)
+          {
+            ret =
+              (c == 7) ?
+                "Destroyed" :
+                "Sunk";
+          }
+          else
+          {
+            ret = "Heavy";
+          }
+        }
+        else
+        {
+          ret = "Light";
+        }
+      }
+      else
+      {
+        ret = "None";
+      }
+      return ret;
+    }
+
+    public void FirePlayAgain()
+    {
+      this.playAgain?.Invoke();
     }
   }
 }

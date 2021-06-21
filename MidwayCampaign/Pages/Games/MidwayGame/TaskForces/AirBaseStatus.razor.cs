@@ -105,5 +105,55 @@ namespace MidwayCampaign.Pages.Games.MidwayGame.TaskForces
     public AirBaseStatusBase()
     {
     }
+
+    protected override void OnInitialized()
+    {
+      base.OnInitialized();
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+      base.OnAfterRender(firstRender);
+      this.midwayWatching = this.midway;
+    }
+
+    private MidwayScenario? _midwayWatching = null;
+    private MidwayScenario? midwayWatching
+    {
+      get => this._midwayWatching;
+      set
+      {
+        if (this._midwayWatching != value)
+        {
+          if (this._midwayWatching != null)
+          {
+            this._midwayWatching.taskForceUpdated -= AirBaseStatus_taskForceUpdated;
+            this._midwayWatching.endingActivitiies -= AirBaseStatus_endingActivitiies;
+          }
+          this._midwayWatching = value;
+          if (this._midwayWatching != null)
+          {
+            this._midwayWatching.taskForceUpdated += AirBaseStatus_taskForceUpdated;
+            this._midwayWatching.endingActivitiies += AirBaseStatus_endingActivitiies;
+          }
+        }
+      }
+    }
+
+    private void AirBaseStatus_endingActivitiies()
+    {
+      this.InvokeAsync(() =>
+      {
+        this.StateHasChanged();
+      });
+    }
+
+    private void AirBaseStatus_taskForceUpdated()
+    {
+      this.InvokeAsync(() =>
+      {
+        this.StateHasChanged();
+      });
+    }
   }
 }

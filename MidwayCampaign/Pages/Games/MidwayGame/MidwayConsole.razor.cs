@@ -59,8 +59,6 @@ namespace MidwayCampaign.Pages.Games.MidwayGame
     protected override void OnInitialized()
     {
       base.OnInitialized();
-      this.midway!.outputText += Midway_outputText;
-      this.midway!.outputWord += MidwayConsoleBase_outputWord;
     }
 
     protected override void OnAfterRender(bool firstRender)
@@ -69,6 +67,55 @@ namespace MidwayCampaign.Pages.Games.MidwayGame
       this.jsRuntime?.InvokeVoidAsync(
         "midway.scrollLog",
         "logTextArea");
+      this.jsRuntime?.InvokeVoidAsync(
+        "midway.focus",
+        "inputCommand");
+      this.midwayWatching = this.midway;
+    }
+
+    private MidwayScenario? _midwayWatching = null;
+    private MidwayScenario? midwayWatching
+    {
+      get => this._midwayWatching;
+      set
+      {
+        if (this._midwayWatching != value)
+        {
+          if (this._midwayWatching != null)
+          {
+            this._midwayWatching.outputText -= this.Midway_outputText;
+            this._midwayWatching.outputWord -= this.MidwayConsoleBase_outputWord;
+            this._midwayWatching.endingActivitiies -= this.MidwayConsoleBase_endingActivitiies;
+            this._midwayWatching.strikeHappeningChanged -= _midwayWatching_strikeHappeningChanged;
+          }
+          this._midwayWatching = value;
+          if (this._midwayWatching != null)
+          {
+            this._midwayWatching.outputText += this.Midway_outputText;
+            this._midwayWatching.outputWord += this.MidwayConsoleBase_outputWord;
+            this._midwayWatching.endingActivitiies += this.MidwayConsoleBase_endingActivitiies;
+            this._midwayWatching.strikeHappeningChanged += _midwayWatching_strikeHappeningChanged;
+          }
+        }
+      }
+    }
+
+    private void _midwayWatching_strikeHappeningChanged()
+    {
+      if (this.midway?.strikeHappening == true)
+      {
+        this.logLineText =
+          string.Concat(
+            this.logLineText,
+            Environment.NewLine,
+            "---------------------------------------------------------",
+            Environment.NewLine);
+      }
+    }
+
+    private void MidwayConsoleBase_endingActivitiies()
+    {
+      this.UpdateReadOnlyStatus();
     }
 
     private void Midway_outputText(string message)
@@ -99,7 +146,10 @@ namespace MidwayCampaign.Pages.Games.MidwayGame
 
         command = this.consoleEntry.Trim();
         this.consoleEntry = string.Empty;
-        this.ProcessCommand(command);
+        Task.Run(() =>
+        {
+          this.ProcessCommand(command);
+        });
       }
     }
 
@@ -107,5 +157,32 @@ namespace MidwayCampaign.Pages.Games.MidwayGame
     {
       this.midway!.ProcessCommand(command);
     }
+
+    private void UpdateReadOnlyStatus()
+    {
+      this.readOnly = !this.canTakeCommands;
+    }
+
+    private bool _readOnly;
+    public bool readOnly
+    {
+      get => this._readOnly;
+      set
+      {
+        if (this._readOnly != value)
+        {
+          this.InvokeAsync(() =>
+          {
+            this.StateHasChanged();
+          });
+          this._readOnly = value;
+        }
+      }
+    }
+
+    protected bool canTakeCommands =>
+      this.midway != null &&
+      !this.midway.gameOver &&
+      !this.midway.activitiesHappening;
   }
 }

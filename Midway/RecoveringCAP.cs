@@ -12,7 +12,7 @@ namespace MidwayEngine
     public int capCount;
     public int tfHome;
     public int tfDest;
-    public Dictionary<int, int> capHomeVessels;
+    public Dictionary<int, int> capHomeVessels { get; set; } = new Dictionary<int, int>();
     public int timeBack;
     public int attempt;
   }

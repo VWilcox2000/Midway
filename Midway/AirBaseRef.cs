@@ -14,5 +14,7 @@ namespace MidwayEngine
     public FlightGroups armed { get; } = new FlightGroups();
     public FlightGroups below { get; } = new FlightGroups();
     public decimal damage { get; set; }
+    public bool escort { get; set; }
+    public bool landBase { get; set; }
   }
 }

@@ -6,8 +6,19 @@
             class="MidwayConsoleLog"
             readonly
             @bind="this.logLineText"></textarea>
-  <input type="text" autofocus class="MidwayConsoleInput"
-         @bind-value:event="oninput"
-         @bind-value="this.consoleEntry"
-         @onkeydown="this.onKeyPress"/>
+  @if (this.canTakeCommands)
+  {
+    <input id="inputCommand"
+           type="text" autofocus class="MidwayConsoleInput"
+           @bind-value:event="oninput"
+           @bind-value="this.consoleEntry"
+           @onkeydown="this.onKeyPress" />
+  }
+  else
+  {
+    <input id="inputCommand"
+           type="text" autofocus class="MidwayConsoleInput"
+           readonly
+           @bind-value="this.consoleEntry" />
+  }
 </div>

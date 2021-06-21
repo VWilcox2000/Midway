@@ -27,6 +27,7 @@
   font-weight: bold;
   font-size: 28px;
   color: #ffb045;
+  user-select: none;
 }
 
 .MidwayPlayGrid {

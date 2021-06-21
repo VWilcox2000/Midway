@@ -1,0 +1,146 @@
+﻿@namespace MidwayCampaign.Pages.Games.MidwayGame
+@inherits MidwayFinalScoreSummaryBase
+
+<div class="finalScoreBacking">
+  <div class="finalScoreOuterFrame">
+    <div class="finalScoreInnerFrame">
+      <div class="finalScoreHeader">
+        <span class="finalScoreHeaderText">
+          The Battle is Over
+        </span>
+      </div>
+      <div class="finalScoreSummaryArea">
+        <div class="finalVictorDeclaration @this.finalVictorCss">
+          @this.finalVictorText
+        </div>
+        <div class="carrierStatusesFrame">
+          <div class="carrierStatuses">
+            <div class="carrierBox carrierHeaderBox">
+              <span class="carrierStatusHeaderText">
+                Carrier
+              </span>
+            </div>
+            <div class="carrierStatusBox carrierHeaderBox">
+              <span class="carrierStatusHeaderText">
+                Damage
+              </span>
+            </div>
+            <div class="carrierBox carrierJapanese">
+              <span class="carrierText">
+                Akagi
+              </span>
+            </div>
+            <div class="carrierStatusBox">
+              <span class="carrierStatusText">
+                @this.stateOf(MidwayEngine.AirBases.Akagi)
+              </span>
+            </div>
+            <div class="carrierBox carrierJapanese">
+              <span class="carrierText">
+                Kaga
+              </span>
+            </div>
+            <div class="carrierStatusBox">
+              <span class="carrierStatusText">
+                @this.stateOf(MidwayEngine.AirBases.Kaga)
+              </span>
+            </div>
+            <div class="carrierBox carrierJapanese">
+              <span class="carrierText">
+                Soryu
+              </span>
+            </div>
+            <div class="carrierStatusBox">
+              <span class="carrierStatusText">
+                @this.stateOf(MidwayEngine.AirBases.Soryu)
+              </span>
+            </div>
+            <div class="carrierBox carrierJapanese">
+              <span class="carrierText">
+                Hiryu
+              </span>
+            </div>
+            <div class="carrierStatusBox">
+              <span class="carrierStatusText">
+                @this.stateOf(MidwayEngine.AirBases.Hiryu)
+              </span>
+            </div>
+            @if (this.includeZuiho)
+            {
+              <div class="carrierBox carrierJapanese">
+                <span class="carrierText">
+                  Zuiho (Escort Carrier)
+                </span>
+              </div>
+              <div class="carrierStatusBox">
+                <span class="carrierStatusText">
+                  @this.stateOf(MidwayEngine.AirBases.Zuiho)
+                </span>
+              </div>
+            }
+
+            <div class="carrierBox carrierUS">
+              <span class="carrierText">
+                Enterprise
+              </span>
+            </div>
+            <div class="carrierStatusBox">
+              <span class="carrierStatusText">
+                @this.stateOf(MidwayEngine.AirBases.Enterprise)
+              </span>
+            </div>
+            <div class="carrierBox carrierUS">
+              <span class="carrierText">
+                Hornet
+              </span>
+            </div>
+            <div class="carrierStatusBox">
+              <span class="carrierStatusText">
+                @this.stateOf(MidwayEngine.AirBases.Hornet)
+              </span>
+            </div>
+            <div class="carrierBox carrierUS">
+              <span class="carrierText">
+                Yorktown
+              </span>
+            </div>
+            <div class="carrierStatusBox">
+              <span class="carrierStatusText">
+                @this.stateOf(MidwayEngine.AirBases.Yorktown)
+              </span>
+            </div>
+            <div class="carrierBox carrierUS">
+              <span class="carrierText">
+                Midway Airfield
+              </span>
+            </div>
+            <div class="carrierStatusBox">
+              <span class="carrierStatusText">
+                @this.stateOf(MidwayEngine.AirBases.Midway)
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="usPlaneLostFrame planesLostFrame">
+          <span class="planesLost">The United States lost @this.usPlanesLostText.</span>
+        </div>
+        <div class="japanesePlaneLostFrame planesLostFrame">
+          <span class="planesLost">The Japanese lost @this.japanesePlanesLostText.</span>
+        </div>
+
+        <div class="midwayStatusFrame">
+          <span class="midwayStatusText">Midway Island has @this.midwayFallenStatus.</span>
+        </div>
+
+      </div>
+
+      <div class="buttonPlayAgainArea">
+        <div class="buttonPlayAgain"
+             @onclick="this.onPlayAgain">
+          Play Again
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

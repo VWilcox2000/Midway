@@ -1,19 +1,18 @@
-﻿using Midway;
-using Microsoft.AspNetCore.Components;
+﻿using Microsoft.AspNetCore.Components;
+using MidwayEngine;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using MidwayEngine;
 
 namespace MidwayCampaign.Pages.Games.MidwayGame
 {
-  public class MidwayGamePageBase : ComponentBase
+  public class StrikeViewBase : ComponentBase
   {
     protected MidwayScenario midway { get; private set; } = new MidwayScenario();
-    protected bool showFinalSummary => this.midway.gameOver;
+    protected bool showStrikeView => this.midway.strikeHappening;
 
-    public MidwayGamePageBase()
+    public StrikeViewBase()
     {
     }
 
@@ -38,22 +37,18 @@ namespace MidwayCampaign.Pages.Games.MidwayGame
         {
           if (this._midwayWatching != null)
           {
-            this._midwayWatching.playAgain -= Midway_playAgain;
-            this._midwayWatching.gameNowOver -= Midway_gameNowOver;
-            this._midwayWatching.endingActivitiies -= MidwayGamePageBase_endingActivitiies;
+            this._midwayWatching.strikeHappeningChanged -= this.MidwayWatching_strikeHappeningChanged;
           }
           this._midwayWatching = value;
           if (this._midwayWatching != null)
           {
-            this._midwayWatching.playAgain += Midway_playAgain;
-            this._midwayWatching.gameNowOver += Midway_gameNowOver;
-            this._midwayWatching.endingActivitiies += MidwayGamePageBase_endingActivitiies;
+            this._midwayWatching.strikeHappeningChanged += this.MidwayWatching_strikeHappeningChanged;
           }
         }
       }
     }
 
-    private void MidwayGamePageBase_endingActivitiies()
+    private void MidwayWatching_strikeHappeningChanged()
     {
       this.InvokeAsync(() =>
       {
@@ -61,21 +56,15 @@ namespace MidwayCampaign.Pages.Games.MidwayGame
       });
     }
 
-    private void Midway_gameNowOver()
+    protected string strikeTitle
     {
-      this.InvokeAsync(() =>
+      get
       {
-        this.StateHasChanged();
-      });
-    }
+        string ret;
 
-    private void Midway_playAgain()
-    {
-      this.midway = new MidwayScenario();
-      this.InvokeAsync(() =>
-      {
-        this.StateHasChanged();
-      });
+        ret = "The Strike Title";
+        return ret;
+      }
     }
   }
 }

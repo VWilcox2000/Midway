@@ -1,0 +1,20 @@
+﻿@namespace MidwayCampaign.Pages.Games.MidwayGame
+@inherits StrikeViewBase
+
+@if (this.showStrikeView)
+{
+  <div class="strikeViewBacking">
+    <div class="strikeViewOuterFrame">
+      <div class="strikeViewInnerFrame">
+        <div class="strikeViewHeader">
+          <span class="strikeViewHeaderText">
+            @this.strikeTitle
+          </span>
+        </div>
+        <div class="strikeViewSummaryArea">
+          Strike Events here
+        </div>
+      </div>
+    </div>
+  </div>
+}

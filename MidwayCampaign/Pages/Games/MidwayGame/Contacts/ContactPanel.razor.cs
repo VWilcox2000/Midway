@@ -63,7 +63,43 @@ namespace MidwayCampaign.Pages.Games.MidwayGame.Contacts
     protected override void OnInitialized()
     {
       base.OnInitialized();
-      this.midway!.taskForceUpdated += ContactPanel_taskForceUpdated;
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+      base.OnAfterRender(firstRender);
+      this.midwayWatching = this.midway;
+    }
+
+    private MidwayScenario? _midwayWatching = null;
+    private MidwayScenario? midwayWatching
+    {
+      get => this._midwayWatching;
+      set
+      {
+        if (this._midwayWatching != value)
+        {
+          if (this._midwayWatching != null)
+          {
+            this._midwayWatching.taskForceUpdated -= ContactPanel_taskForceUpdated;
+            this._midwayWatching.endingActivitiies -= ContactPanelBase_endingActivitiies;
+          }
+          this._midwayWatching = value;
+          if (this._midwayWatching != null)
+          {
+            this._midwayWatching.taskForceUpdated += ContactPanel_taskForceUpdated;
+            this._midwayWatching.endingActivitiies += ContactPanelBase_endingActivitiies;
+          }
+        }
+      }
+    }
+
+    private void ContactPanelBase_endingActivitiies()
+    {
+      this.InvokeAsync(() =>
+      {
+        this.StateHasChanged();
+      });
     }
 
     private void ContactPanel_taskForceUpdated()
