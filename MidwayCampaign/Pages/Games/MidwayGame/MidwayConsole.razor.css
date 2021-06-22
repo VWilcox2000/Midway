@@ -15,6 +15,7 @@
   font-size: 14px;
   resize: none;
   color: black;
+  background-color: whitesmoke;
 }
 
   .MidwayConsoleLog::-webkit-scrollbar {
@@ -39,6 +40,7 @@
 .MidwayConsoleInput {
   font-family: Calibri;
   font-size: 20px;
+  padding: 0 5px;
 }
 
 .logAreaPanes {
@@ -64,4 +66,27 @@
   border-radius: 8px;
   background-color: ivory;
   box-shadow: rgb(0 0 0 / 40%) 2px 2px 3px inset;
+}
+
+.MidwayConsoleInputGrid {
+  display: inline-grid;
+  grid-template-columns: min-content auto;
+  grid-template-rows: auto;
+  grid-auto-flow: row;
+}
+
+.MidwayConsoleCommandLabel {
+  padding: 1px 10px 1px 12px;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  background-color: darkslategray;
+  background: linear-gradient(0deg, #0060b0 0%, #002040 20%, #002040 80%, #0060b0 100%);
+}
+
+.MidwayConsoleCommandText {
+  font-family: Calibri;
+  font-size: 18px;
+  font-weight: bold;
+  color: white;
 }

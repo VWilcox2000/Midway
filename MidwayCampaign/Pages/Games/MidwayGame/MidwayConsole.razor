@@ -13,19 +13,26 @@
       </div>
     </div>
   </div>
-  @if (this.canTakeCommands)
-  {
-    <input id="inputCommand"
-           type="text" autofocus class="MidwayConsoleInput"
-           @bind-value:event="oninput"
-           @bind-value="this.consoleEntry"
-           @onkeydown="this.onKeyPress" />
-  }
-  else
-  {
-    <input id="inputCommand"
-           type="text" autofocus class="MidwayConsoleInput"
-           readonly
-           @bind-value="this.consoleEntry" />
-  }
+  <div class="MidwayConsoleInputGrid">
+    <div class="MidwayConsoleCommandLabel">
+      <span class="MidwayConsoleCommandText">
+        Enter Command:
+      </span>
+    </div>
+    @if (this.canTakeCommands)
+    {
+      <input id="inputCommand"
+             type="text" autofocus class="MidwayConsoleInput"
+             @bind-value:event="oninput"
+             @bind-value="this.consoleEntry"
+             @onkeydown="this.onKeyPress" />
+    }
+    else
+    {
+      <input id="inputCommand"
+             type="text" autofocus class="MidwayConsoleInput"
+             readonly
+             @bind-value="this.consoleEntry" />
+    }
+  </div>
 </div>
