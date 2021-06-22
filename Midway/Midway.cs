@@ -4089,9 +4089,33 @@ namespace MidwayEngine
           armedAircraftDamaged = false;
         }
         */
-        secondaryExplosions =
-          (vessel == 7 ||
-          forceSecondaryExplosions);
+        switch (planeType)
+        {
+          case PlaneTypes.Bomber:
+            secondaryExplosions =
+              this.random.NextDouble() <
+              ((double)hits) * 0.09 +
+              ((double)nearMisses) * 0.06;
+            break;
+          case PlaneTypes.TorpedoBomber:
+            if (vessel == 7)
+            {
+              secondaryExplosions =
+                this.random.NextDouble() <
+                ((double)hits) * 0.08 +
+                ((double)nearMisses) * 0.04;
+            }
+            else
+            {
+              secondaryExplosions =
+                this.random.NextDouble() <
+                ((double)hits) * 0.18;
+            }
+            break;
+          default:
+            secondaryExplosions = forceSecondaryExplosions;
+            break;
+        }
         targetGone = false;
         if (secondaryExplosions)
         {
