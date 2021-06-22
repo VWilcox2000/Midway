@@ -36,6 +36,8 @@ namespace MidwayEngine
       }
     }
 
+    public string? ip { get; set; } = null;
+
     public ResultsData(MidwayScenario scenario)
     {
       foreach (AirBaseRef airBase in scenario.airBaseRefs)

@@ -46,6 +46,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="WindowsAzure.Storage" Version="9.3.3" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Update="wwwroot\about\about_midway.htm">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

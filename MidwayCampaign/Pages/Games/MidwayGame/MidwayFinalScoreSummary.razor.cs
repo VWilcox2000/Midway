@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.Http;
 using MidwayEngine;
 using System;
 using System.Collections.Generic;
@@ -12,6 +13,9 @@ namespace MidwayCampaign.Pages.Games.MidwayGame
   {
     [CascadingParameter]
     public MidwayScenario? midway { get; set; }
+
+    [Inject]
+    public IHttpContextAccessor? httpContextAccessor { get; set; }
 
     public MidwayFinalScoreSummaryBase()
     {
@@ -157,7 +161,16 @@ namespace MidwayCampaign.Pages.Games.MidwayGame
       {
         if (this._results == null)
         {
-          this._results = new ResultsData(this.midway!);
+          ResultsData r;
+
+          r = new ResultsData(this.midway!);
+          this._results = r;
+          Task.Run(async () =>
+          {
+            await ResultsStorage.StoreResults(
+              this.httpContextAccessor?.HttpContext?.Connection?.RemoteIpAddress?.ToString(),
+              r);
+          });
         }
         return this._results;
       }

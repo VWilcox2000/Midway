@@ -361,3 +361,4 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+/MidwayCampaign/Pages/Games/MidwayGame/ResultsStorage.azureStorage.cs
