@@ -74,5 +74,23 @@ namespace MidwayCampaign.Pages.Games.MidwayGame
     {
       this.showAbout = false;
     }
+
+    protected string aboutStyleModifier
+    {
+      get
+      {
+        string ret;
+
+        if (this.showAbout)
+        {
+          ret = string.Empty;
+        }
+        else
+        {
+          ret = "display: none;";
+        }
+        return ret;
+      }
+    }
   }
 }
