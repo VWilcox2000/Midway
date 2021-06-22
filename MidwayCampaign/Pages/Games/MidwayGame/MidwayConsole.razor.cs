@@ -61,9 +61,18 @@ namespace MidwayCampaign.Pages.Games.MidwayGame
       base.OnInitialized();
     }
 
+    private Guid uidOurGameInstance = Guid.Empty;
     protected override void OnAfterRender(bool firstRender)
     {
       base.OnAfterRender(firstRender);
+      if (this.uidOurGameInstance != this.midway!.uidGameInstance)
+      {
+        this.uidOurGameInstance = this.midway!.uidGameInstance;
+        this._logLineText =
+          "Welcome to the Midway Campaign..." +
+          Environment.NewLine +
+          Environment.NewLine;
+      }
       this.jsRuntime?.InvokeVoidAsync(
         "midway.scrollLog",
         "logTextArea");
@@ -118,7 +127,9 @@ namespace MidwayCampaign.Pages.Games.MidwayGame
       this.UpdateReadOnlyStatus();
     }
 
-    private void Midway_outputText(string message)
+    private void Midway_outputText(
+      StrikeEventTypes? eventType,
+      string message)
     {
       this.logLineText =
         string.Concat(
@@ -127,7 +138,9 @@ namespace MidwayCampaign.Pages.Games.MidwayGame
           message);
     }
 
-    private void MidwayConsoleBase_outputWord(string message)
+    private void MidwayConsoleBase_outputWord(
+      StrikeEventTypes? eventType,
+      string message)
     {
       this.logLineText =
         string.Concat(

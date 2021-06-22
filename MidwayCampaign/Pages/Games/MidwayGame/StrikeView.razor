@@ -12,7 +12,15 @@
           </span>
         </div>
         <div class="strikeViewSummaryArea">
-          Strike Events here
+          @{
+            StrikeEvent? previousStrikeEvent = null;
+          }
+          @foreach (StrikeEvent strikeEvent in this.currentEvents)
+          {
+            <StrikeEventView strikeEvent="strikeEvent"
+                             previousStrikeEvent="previousStrikeEvent" />
+            previousStrikeEvent = strikeEvent;
+          }
         </div>
       </div>
     </div>

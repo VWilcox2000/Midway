@@ -13,12 +13,13 @@
   top: 6px;
   width: fit-content;
   height: fit-content;
-  padding: 3px 30px;
+  padding: 3px 50px;
   border-radius: 20px;
   transform: translate(-50%, 0);
   background-color: steelblue;
-  border: 3px solid rgba(0,0,0,0.2);
-  box-shadow: rgba(0,0,0,0.3) 3px 3px 5px;
+  background: linear-gradient(90deg, #0090ff 0%, #0060a0 18%, #0060a0 82%, #0090ff 100%);
+  border: 3px solid rgba(0,0,0,0.5);
+  box-shadow: rgba(0,0,0,0.4) 5px 5px 8px;
   overflow: auto;
 }
 
@@ -26,8 +27,9 @@
   font-family: Calibri;
   font-weight: bold;
   font-size: 28px;
-  color: #ffb045;
+  color: #f0f7ff;
   user-select: none;
+  text-shadow: rgba(0,0,0,0.4) 2px 2px 3px;
 }
 
 .MidwayPlayGrid {
@@ -40,8 +42,8 @@
   border-radius: 6px;
   background-color: steelblue;
   display: inline-grid;
-  grid-template-columns: 60vh auto;
-  grid-template-rows: 60vh auto;
+  grid-template-columns: 57vh auto;
+  grid-template-rows: 57vh auto;
   box-shadow: rgba(0,0,0,0.25) 4px 3px 5px;
   padding: 4px;
   column-gap: 5px;
@@ -83,7 +85,7 @@
   border: 3px solid black;
   border-radius: 5px;
   background-color: #001020;
-  min-height: 80px;
+  min-height: 120px;
   padding: 2px;
   overflow: auto;
 }

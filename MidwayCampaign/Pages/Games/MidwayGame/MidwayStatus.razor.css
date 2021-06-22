@@ -7,6 +7,25 @@
   overflow: auto;
 }
 
+.MidwayStatusPane::-webkit-scrollbar {
+  width: 10px;
+}
+
+/* Track */
+.MidwayStatusPane::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+/* Handle */
+.MidwayStatusPane::-webkit-scrollbar-thumb {
+  background: #888;
+}
+
+  /* Handle on hover */
+  .MidwayStatusPane::-webkit-scrollbar-thumb:hover {
+    background: #555;
+  }
+
 .MidwayDateLine {
   position: relative;
   left: 0;
@@ -15,7 +34,7 @@
   height: fit-content;
   display: inline-grid;
   grid-template-rows: min-content;
-  grid-template-columns: auto auto;
+  grid-template-columns: auto auto min-content;
   grid-auto-flow: column;
   padding: 0px 6px 0 6px;
 }

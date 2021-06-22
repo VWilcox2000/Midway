@@ -59,9 +59,9 @@
 
 .strikeViewSummaryArea {
   position: absolute;
-  left: 10px;
+  left: 26px;
   top: 70px;
-  right: 10px;
+  right: 26px;
   bottom: 10px;
   overflow: auto;
 }

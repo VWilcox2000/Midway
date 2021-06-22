@@ -16,6 +16,8 @@ namespace MidwayCampaign.Pages.Games.MidwayGame
 
     protected string gameTime => this.midway!.timeText;
 
+    public bool isDay => this.midway!.isDay;
+
     public MidwayStatusBase()
     {
     }

@@ -1,0 +1,57 @@
+﻿.MidwayHelpPane {
+  position: relative;
+  left: 0;
+  top: 50%;
+  width: 100%;
+  bottom: 100%;
+  overflow: auto;
+  transform: translate(0,-50%);
+  border: 6px solid black;
+  border-radius: 5px;
+}
+
+  .MidwayHelpPane::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  /* Track */
+  .MidwayHelpPane::-webkit-scrollbar-track {
+    background: #f1f1f1;
+  }
+
+  /* Handle */
+  .MidwayHelpPane::-webkit-scrollbar-thumb {
+    background: #888;
+  }
+
+    /* Handle on hover */
+    .MidwayHelpPane::-webkit-scrollbar-thumb:hover {
+      background: #555;
+    }
+
+.helpInformationGrid {
+  position: relative;
+  display: inline-grid;
+  grid-template-columns: auto auto;
+  grid-auto-flow: row;
+  width: 100%;
+}
+
+.helpOperationArea {
+  white-space: nowrap;
+  background-color: darkslategrey;
+  color: white;
+  font-family: Calibri;
+  font-size: 14px;
+  padding: 1px 6px;
+  border: 1px solid black;
+}
+
+.helpOperationText {
+  white-space: nowrap;
+  color: black;
+  font-family: Calibri;
+  font-size: 14px;
+  padding: 1px 6px;
+  border: 1px solid darkslategrey;
+}

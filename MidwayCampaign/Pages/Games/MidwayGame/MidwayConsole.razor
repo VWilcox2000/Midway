@@ -2,10 +2,17 @@
 @inherits MidwayConsoleBase
 
 <div class="MidwayConsoleGrid">
-  <textarea id="logTextArea"
-            class="MidwayConsoleLog"
-            readonly
-            @bind="this.logLineText"></textarea>
+  <div class="logAreaPanes">
+    <textarea id="logTextArea"
+              class="MidwayConsoleLog"
+              readonly
+              @bind="this.logLineText"></textarea>
+    <div class="midwayHelpArea">
+      <div class="midwayHelpAreaInnerFrame">
+        <HelpPane />
+      </div>
+    </div>
+  </div>
   @if (this.canTakeCommands)
   {
     <input id="inputCommand"

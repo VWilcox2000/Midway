@@ -17,7 +17,51 @@
   color: black;
 }
 
+  .MidwayConsoleLog::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  /* Track */
+  .MidwayConsoleLog::-webkit-scrollbar-track {
+    background: #f1f1f1;
+  }
+
+  /* Handle */
+  .MidwayConsoleLog::-webkit-scrollbar-thumb {
+    background: #888;
+  }
+
+    /* Handle on hover */
+    .MidwayConsoleLog::-webkit-scrollbar-thumb:hover {
+      background: #555;
+    }
+
 .MidwayConsoleInput {
   font-family: Calibri;
   font-size: 20px;
+}
+
+.logAreaPanes {
+  position: relative;
+  left: 0;
+  display: inline-grid;
+  grid-template-rows: auto;
+  grid-template-columns: auto min-content;
+}
+
+.midwayHelpArea {
+  min-width: 300px;
+  width: fit-content;
+  background-color: lightgray;
+  padding: 6px;
+}
+
+.midwayHelpAreaInnerFrame {
+  width: 100%;
+  height: 100%;
+  border: 3px solid black;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background-color: ivory;
+  box-shadow: rgb(0 0 0 / 40%) 2px 2px 3px inset;
 }

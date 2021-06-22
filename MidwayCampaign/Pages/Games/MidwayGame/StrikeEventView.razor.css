@@ -1,0 +1,87 @@
+﻿.strikeStart_Japanese_area {
+  border: 3px solid firebrick;
+  background-color: red;
+  border-radius: 10px;
+  padding: 3px 26px;
+  box-shadow: rgba(0,0,0,0.3) 3px 3px 5px;
+}
+
+.strikeStart_Japanese_text {
+  font-family: Calibri;
+  font-size: 32px;
+  font-weight: bold;
+  color: white;
+}
+
+.strikeStart_USA_area {
+  border: 3px solid darkblue;
+  background-color: blue;
+  border-radius: 10px;
+  padding: 3px 26px;
+  box-shadow: rgba(0,0,0,0.3) 3px 3px 5px;
+}
+
+.strikeStart_USA_text {
+  font-family: Calibri;
+  font-size: 32px;
+  font-weight: bold;
+  color: white;
+}
+
+.strike_HIT_area {
+  display: inline-block;
+  padding: 1px 6px 1px 32px;
+}
+
+.strike_HIT_text {
+  font-family: Calibri;
+  font-size: 28px;
+  font-weight: bold;
+  color: red;
+}
+
+.strike_NearMiss_area {
+  display: inline-block;
+  padding: 1px 6px 1px 32px;
+}
+
+.strike_NearMiss_text {
+  font-family: Calibri;
+  font-size: 24px;
+  font-weight: 600;
+  color: darkorange;
+}
+
+.strike_Dud_area {
+  display: inline-block;
+  padding: 1px 6px 1px 32px;
+}
+
+.strike_Dud_text {
+  font-family: Calibri;
+  font-size: 22px;
+  font-weight: normal;
+  color: purple;
+}
+
+.strike_Miss_area {
+  display: inline-block;
+  padding: 1px 6px 1px 32px;
+}
+
+.strike_Miss_text {
+  font-family: Calibri;
+  font-size: 20px;
+  font-weight: normal;
+  color: #303030;
+}
+
+.strike_event_area {
+  padding: 0 4px;
+}
+
+.strike_event_text {
+  font-family: Calibri;
+  font-size: 18px;
+  color: black;
+}

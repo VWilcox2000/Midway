@@ -1,0 +1,26 @@
+﻿@namespace MidwayCampaign.Pages.Games.MidwayGame
+@inherits AboutViewBase
+
+@if (this.showAbout)
+{
+  <div class="aboutViewBacking">
+    <div class="aboutViewOuterFrame">
+      <div class="aboutViewInnerFrame">
+        <div class="aboutViewHeader">
+          <span class="aboutViewHeaderText">
+            About The Midway Campaign
+          </span>
+        </div>
+        <div class="aboutContentsArea">
+          <iframe class="aboutIFrame" src="about/about_midway.htm"></iframe>
+        </div>
+        <div class="buttonOkArea">
+          <div class="buttonOk"
+               @onclick="this.onOk">
+            Ok
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+}

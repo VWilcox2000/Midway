@@ -1,0 +1,130 @@
+﻿.aboutViewBacking {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.25);
+}
+
+.aboutViewOuterFrame {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(100% - 200px);
+  height: calc(100% - 200px);
+  max-width: 1200px;
+  max-height: 1000px;
+  transform: translate(-50%, -50%);
+  border-radius: 10px;
+  background-color: steelblue;
+  border: 3px solid black;
+  box-shadow: rgb(0 0 0 / 60%) 6px 6px 8px;
+}
+
+.aboutViewInnerFrame {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  right: 8px;
+  bottom: 8px;
+  border-radius: 6px;
+  border: 2px solid black;
+  background-color: lightsteelblue;
+  box-shadow: rgba(0,0,0,0.3) -3px -3px 5px;
+}
+
+.aboutViewHeader {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  height: 60px;
+  border-bottom: 3px solid black;
+  background-color: #001020;
+  box-shadow: rgba(0,0,0,0.5) 0 5px 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(90deg, #0080a0 0, #001020 20%, #001020 80%, #0080a0 100%);
+}
+
+.aboutViewHeaderText {
+  font-family: Calibri;
+  font-size: 40px;
+  color: white;
+  text-shadow: rgba(0,0,0,0.3) 2px 2px 3px;
+  user-select: none;
+}
+
+.aboutContentsArea {
+  position: absolute;
+  left: 10px;
+  top: 70px;
+  right: 10px;
+  bottom: 120px;
+}
+
+.buttonOkArea {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 25px;
+  height: 70px;
+  padding: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.buttonOk {
+  font-family: Calibri;
+  font-size: 30px;
+  font-weight: bold;
+  color: #f0f0f0;
+  border: 4px solid black;
+  background-color: darkblue;
+  padding: 10px 60px;
+  border-radius: 10px;
+  user-select: none;
+  cursor: pointer;
+}
+
+  .buttonOk:hover {
+    color: white;
+    background-color: blue;
+    box-shadow: rgba(0,0,0,0.3) 4px 4px 6px;
+  }
+
+  .buttonOk:active {
+    box-shadow: none;
+    transform: translate(3px, 3px);
+  }
+
+.aboutIFrame {
+  position: relative;
+  border: 2px solid black;
+  border-radius: 4px;
+  width: 100%;
+  height: 100%;
+  background-color: white;
+}
+
+aboutIFrame::-webkit-scrollbar {
+  width: 10px;
+}
+
+/* Track */
+aboutIFrame::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+/* Handle */
+aboutIFrame::-webkit-scrollbar-thumb {
+  background: #888;
+}
+
+  /* Handle on hover */
+  aboutIFrame::-webkit-scrollbar-thumb:hover {
+    background: #555;
+  }

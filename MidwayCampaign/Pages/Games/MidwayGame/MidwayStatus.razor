@@ -12,6 +12,16 @@
     <div class="MidwayTimeArea">
       <span class="MidwayTimeText MidwayDateTimeText">@this.gameTime</span>
     </div>
+    @if (this.isDay)
+    {
+      <img style="margin: 4px;"
+           src="/images/Day.png" />
+    }
+    else
+    {
+      <img style="margin: 4px;"
+           src="/images/Night.png" />
+    }
   </div>
   <TaskForceStatus forceType="ForceTypes.TaskForce16" />
   <TaskForceStatus forceType="ForceTypes.TaskForce17" />
