@@ -2110,25 +2110,9 @@ namespace MidwayEngine
           }
         }
       }
-      if (!japanese)
-      {
-        for (i = 0; i <= 4; i += 2)
-        {
-          if (
-            this.S[si, i] != 0 &&
-            this.S[si, i + 1] == -1)
-          {
-            this.output(
-              StrikeEventTypes.ComponentMissesTarget,
-              "{0}'s {1} miss target.",
-              this.vessels[(int)this.S[si, 9]],
-              this.planes[0, i / 2]);
-          }
-        }
-      }
 
       if (
-        this.S[si, 3] + this.S[si, 5] != -2 &&
+        Math.Abs(this.S[si, 3] + this.S[si, 5]) < 2 &&
         this.S[si, 2] + this.S[si, 4] != 0)
       {
         bool attackCarriers;
@@ -2168,6 +2152,23 @@ namespace MidwayEngine
           target);
         this.interruptTimeAdvancement = true;
 
+        if (!japanese)
+        {
+          for (i = 0; i <= 4; i += 2)
+          {
+            if (
+              this.S[si, i] != 0 &&
+              this.S[si, i + 1] != 0)
+            {
+              this.output(
+                StrikeEventTypes.ComponentMissesTarget,
+                "{0}'s {1} miss target.",
+                this.vessels[(int)this.S[si, 9]],
+                this.planes[0, i / 2]);
+            }
+          }
+        }
+
         attackCarriers = false;
         for (i = 0; i <= 8; ++i)
         {
@@ -2193,7 +2194,7 @@ namespace MidwayEngine
           {
             if (
               this.S[si, i] != 0 &&
-              this.S[si, i + 1] != -1)
+              this.S[si, i + 1] == 0)
             {
               count = (int)this.S[si, i];
               this.output(
@@ -2316,14 +2317,14 @@ namespace MidwayEngine
             // torp bombers or dive bombers cap victims?
             capTarget = (this.random.NextDouble() >= 0.5) ? 4 : 2;
             if (
-              this.S[si, capTarget + 1] == -1 ||  // missed?
+              this.S[si, capTarget + 1] != 0 ||  // missed?
               this.S[si, capTarget] == 0)         // no such component
             {
               // go to the other target
               capTarget = 6 - capTarget;
             }
             if (
-              this.S[si, capTarget + 1] != -1 &&  // missed?
+              this.S[si, capTarget + 1] == 0 &&  // missed?
               this.S[si, capTarget] > 0)         // no such component
             {
               // cap has a target of capTarget
@@ -2371,6 +2372,26 @@ namespace MidwayEngine
         }
         this.strikeHappening = false;
       }
+      else
+      {
+        if (!japanese)
+        {
+          for (i = 0; i <= 4; i += 2)
+          {
+            if (
+              this.S[si, i] != 0 &&
+              this.S[si, i + 1] != 0)
+            {
+              this.output(
+                StrikeEventTypes.ComponentMissesTarget,
+                "{0}'s {1} miss target.",
+                this.vessels[(int)this.S[si, 9]],
+                this.planes[0, i / 2]);
+            }
+          }
+        }
+      }
+
       this.S[si, 1] = -1;
       this.S[si, 3] = -1;
       this.S[si, 5] = -1;
@@ -2420,7 +2441,7 @@ namespace MidwayEngine
         // wave have any planes in it?  did they not miss target
         if (
           this.S[si, wave] != 0 &&
-          this.S[si, wave + 1] != -1)
+          this.S[si, wave + 1] == 0)
         {
           targets = new List<int>();
           // assign targest to vessels
@@ -2941,7 +2962,7 @@ namespace MidwayEngine
       {
         if (
           this.S[si, i] != 0 &&
-          this.S[si, i + 1] != -1)
+          this.S[si, i + 1] == 0)
         {
           switch(i)
           {

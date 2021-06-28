@@ -3,15 +3,59 @@
 
 @page "/"
 
+<div class="mainPageFrame">
+  <div class="mainPageHolders">
+    <div class="mainPageTitleHolder">
+      <div class="mainPageTitleFrame">
+        <span class="mainPageTitleText">
+          The Battle for Midway
+        </span>
+      </div>
+    </div>
+    <div class="mainContentHolder">
+      <div class="mainContentFrame">
+        <div class="mainContentText">
+          <div style="width: 100%; text-align: center;">
+            <span style="font-size: 38px; font-weight: bold;">Welcome to the Battle for Midway simulation!</span>
+          </div>
+
+          <p>
+            This is a slightly modernized take on a classic simulation game popular in the 80's by Avalon Hill.  In this battle, you will have command of US forces in the battle of midway while the computer will be playing the role of the Japanese fleet coming to take Midway.
+            The game is a work in progress, and contributors to the project are welcome.  The UI is currently in blazor and only optimized for desktop screen size.  I will likely put out a mobile friendly version down the road.  While this version features some extra commands, they are similar to the original game with one difference.
+            Whereas in the old simulation game, you would type 'T' [enter], then 16 [enter], and 270 [enter] to set the heading of task force 16 as 270 degrees to the West, in this version, commands must be combined such as:  T 16 270 [enter].
+            Down the road, I hope to slowly evolve the game into a more graphical experience and eventually make it real-time.  The current version should be fairly familiar to fans of the original.
+          </p>
+          <p />
+
+          <p>The game lifecycle is tied to the page for now, so refreshing will start a new game.</p>
+          <p />
+
+          <hr style="margin-top: 200px;" />
+          <div style="width: 100%; text-align: center; font-size: 32px; font-weight: bold;">More about the Battle for Midway.</div>
+          <p />
+
+          <AboutContents />
+        </div>
+      </div>
+    </div>
+    <div class="mainContentPlayOptionHolder">
+      <div class="mainContentPlayOption"
+           @onclick="this.onPlay">
+        Play Battle for Midway
+      </div>
+    </div>
+  </div>
+</div>
+
 @code {
-	protected override void OnInitialized()
-	{
-		try
-		{
-			NavManager.NavigateTo("Midway");
-		}
-		catch //(NavigationException ne)
-		{
-		}
-	}
+  protected void onPlay(MouseEventArgs args)
+  {
+    try
+    {
+      NavManager.NavigateTo("Midway");
+    }
+    catch //(NavigationException ne)
+    {
+    }
+  }
 }

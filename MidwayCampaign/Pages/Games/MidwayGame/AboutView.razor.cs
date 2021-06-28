@@ -62,6 +62,10 @@ namespace MidwayCampaign.Pages.Games.MidwayGame
             this._midwayWatching!.showAboutRequested += AboutViewBase_showAboutRequested;
           }
         }
+        if (this._midwayWatching == null)
+        {
+          this.showAbout = true;
+        }
       }
     }
 
