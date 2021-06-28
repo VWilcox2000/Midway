@@ -926,6 +926,62 @@ namespace MidwayEngine
                 }
               }
               break;
+            case "r":
+              if (
+                parts.Length == 2 ||
+                parts.Length == 3)
+              {
+                carrier = parts[1];
+                int c;
+
+                switch (carrier)
+                {
+                  case "e":
+                    c = 4;
+                    break;
+                  case "h":
+                    c = 5;
+                    break;
+                  case "y":
+                    c = 6;
+                    break;
+                  case "m":
+                    c = 7;
+                    break;
+                  default:
+                    c = -1;
+                    break;
+                }
+                if (c > -1)
+                {
+                  int? contact;
+                  int cn;
+
+                  if (parts.Length == 3)
+                  {
+                    if (int.TryParse(
+                      parts[2],
+                      out cn))
+                    {
+                      contact = cn;
+                    }
+                    else
+                    {
+                      break;
+                    }
+                  }
+                  else
+                  {
+                    contact = null;
+                  }
+                  this.RangeStrike(
+                    c,
+                    contact);
+                  this.taskForceUpdated?.Invoke();
+                  good = true;
+                }
+              }
+              break;
             case "ca":
               if (parts.Length == 3)
               {
@@ -1237,6 +1293,91 @@ namespace MidwayEngine
         this.outputText?.Invoke(
           eventType,
           s);
+      }
+    }
+
+    private void RangeStrike(
+      int carrier,
+      int? contact)
+    {
+      int cn;
+      //int i;
+
+      cn = this.contactList.Count;
+      if (contact != null)
+      {
+        if (
+          contact < 1 ||
+          contact > this.contactList.Count)
+        {
+          cn = -1;
+        }
+      }
+      if (cn > 0)
+      {
+        if (contact == null)
+        {
+          if (cn == 1)
+          {
+            contact = 1;
+          }
+          else
+          {
+            decimal testr;
+            int fromtf;
+            int testco;
+            int testc;
+
+            fromtf = (int)this.C[carrier, 0];
+            for (
+              testc = 1;
+              testc <= cn;
+              ++testc)
+            {
+              testco = this.contactList[testc - 1];
+              testr = this.CalculateRange(
+                testco,
+                fromtf);
+              if (testr <= 200m)
+              {
+                if (contact == null)
+                {
+                  contact = testc;
+                }
+                else
+                {
+                  // 2 targets in range so they HAVE to specify
+                  contact = null;
+                  break;
+                }
+              }
+            }
+          }
+        }
+        if (
+          contact >= 1 &&
+          contact <= cn)
+        {
+          decimal r;
+          int src;
+          int co;
+
+          //co = this.C1[contact.Value];
+          co = this.contactList[contact.Value - 1];
+          src = (int)this.C[carrier, 0];
+          r = this.CalculateRange(
+            co,
+            src);
+          this.output(
+            "Range to contact {0} is {1} miles.  {2}.",
+            contact,
+            r.ToString("0.0"),
+            r <= 200 ?
+              "In strike range" :
+              string.Format(
+                "{0} miles out of strike range",
+                r - 200m));
+        }
       }
     }
 
@@ -2088,7 +2229,7 @@ namespace MidwayEngine
           }
           else
           {
-            odds = (flightTime - 20) / 110m;
+            odds = (flightTime - 30) / 110m;
             odds *= Math.Max(40, Math.Min(planeCount, 70)) / 70;
           }
           if (
@@ -2119,6 +2260,8 @@ namespace MidwayEngine
         string origin;
         string target;
 
+        // original makes both sides spot each other here
+        // might want to change that up...
         this.F[(int) this.C[(int) this.S[si, 9], 0], 2] = 2;
         this.F[(int)this.S[si, 6], 2] = 2;
         if (this.F[0, 2] == 2)
@@ -2158,7 +2301,7 @@ namespace MidwayEngine
           {
             if (
               this.S[si, i] != 0 &&
-              this.S[si, i + 1] != 0)
+              this.S[si, i + 1] < 0)
             {
               this.output(
                 StrikeEventTypes.ComponentMissesTarget,
@@ -2194,7 +2337,7 @@ namespace MidwayEngine
           {
             if (
               this.S[si, i] != 0 &&
-              this.S[si, i + 1] == 0)
+              this.S[si, i + 1] >= 0)
             {
               count = (int)this.S[si, i];
               this.output(
@@ -2317,14 +2460,14 @@ namespace MidwayEngine
             // torp bombers or dive bombers cap victims?
             capTarget = (this.random.NextDouble() >= 0.5) ? 4 : 2;
             if (
-              this.S[si, capTarget + 1] != 0 ||  // missed?
+              this.S[si, capTarget + 1] < 0 ||  // missed?
               this.S[si, capTarget] == 0)         // no such component
             {
               // go to the other target
               capTarget = 6 - capTarget;
             }
             if (
-              this.S[si, capTarget + 1] == 0 &&  // missed?
+              this.S[si, capTarget + 1] >= 0 &&  // missed?
               this.S[si, capTarget] > 0)         // no such component
             {
               // cap has a target of capTarget
@@ -2380,7 +2523,7 @@ namespace MidwayEngine
           {
             if (
               this.S[si, i] != 0 &&
-              this.S[si, i + 1] != 0)
+              this.S[si, i + 1] < 0)
             {
               this.output(
                 StrikeEventTypes.ComponentMissesTarget,
@@ -2441,7 +2584,7 @@ namespace MidwayEngine
         // wave have any planes in it?  did they not miss target
         if (
           this.S[si, wave] != 0 &&
-          this.S[si, wave + 1] == 0)
+          this.S[si, wave + 1] >= 0)
         {
           targets = new List<int>();
           // assign targest to vessels
@@ -2962,7 +3105,7 @@ namespace MidwayEngine
       {
         if (
           this.S[si, i] != 0 &&
-          this.S[si, i + 1] == 0)
+          this.S[si, i + 1] >= 0)
         {
           switch(i)
           {
@@ -3208,29 +3351,54 @@ namespace MidwayEngine
           // not like they could NOT be searching, though.
           p /= 2m;
         }
-        for (i = 3; i <= 4; ++i) // tf 16 and 17
+        for (
+          i = 3;
+          i <= 4;
+          ++i) // tf 16 and 17
         {
           if (this.F[i, 2] < 2)
           {
-            if (((decimal) this.random.NextDouble()) < p * this.oddsOfJapaneseScoutPlaneMakingSighting)
+            decimal spotOdds;
+            bool spotted;
+
+            spotted = false;
+            spotOdds = this.oddsOfJapaneseScoutPlaneMakingSighting;
+            if (this.day < 4)
+            {
+              // not much out on 3rd
+              spotOdds /= 4m;
+            }
+            if (
+              this.F[i, 2] == 0 &&
+              ((decimal) this.random.NextDouble()) < p * spotOdds)
             {
               this.F[i, 2] = 1;
+              spotted = true;
             }
             if (
               this.F[i, 2] == 1 &&
-              ((decimal) this.random.NextDouble()) <= 3m * this.oddsOfJapaneseScoutPlaneMakingSighting)
+              ((decimal) this.random.NextDouble()) <= 3m * spotOdds)
             {
-              switch(i)
-              {
-                case 3:
-                  this.output("Japanese scout planes sighted over Task Force 16.");
-                  break;
-                case 4:
-                  this.output("Japanese scout planes sighted over Task Force 17.");
-                  break;
-              }
+              spotted = true;
               this.F[i, 2] = 2;
-              this.interruptTimeAdvancement = true;
+            }
+            if (spotted)
+            {
+              if (
+                this.random.Next(0, 100) <
+                this.F[i, 2] * 45)
+              {
+                this.interruptTimeAdvancement = true;
+                switch (i)
+                {
+                  case 3:
+                    this.output("Japanese scout planes sighted over Task Force 16.");
+                    break;
+                  case 4:
+                    this.output("Japanese scout planes sighted over Task Force 17.");
+                    break;
+                }
+              }
             }
           }
         }
@@ -3516,8 +3684,15 @@ namespace MidwayEngine
                   this.S[j, 10] = 0;
                   if (this.S[j, 9] != -1)
                   {
-                    this.S[j, 1] =
-                      (((double)(this.S[j, 2] / (this.S[j, 2] + this.S[j, 4]))) > this.random.NextDouble()) ? 1 : 0;
+                    decimal odds;
+                    decimal rnd;
+
+                    odds =
+                      this.S[j, 2] /
+                      (this.S[j, 2] +
+                      this.S[j, 4]);
+                    rnd = (decimal)this.random.NextDouble();
+                    this.S[j, 1] = (odds > rnd) ? 1 : 0;
                   }
                 }
                 else
