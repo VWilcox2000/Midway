@@ -1376,7 +1376,7 @@ namespace MidwayEngine
               "In strike range" :
               string.Format(
                 "{0} miles out of strike range",
-                r - 200m));
+                (r - 200m).ToString("0.0")));
         }
       }
     }

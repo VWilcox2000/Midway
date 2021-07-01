@@ -28,6 +28,12 @@ namespace MidwayCampaign
       services.AddRazorPages();
       services.AddServerSideBlazor();
       services.AddHttpContextAccessor();
+      services
+        .AddControllers(options =>
+        {
+          //options.Filters.Add<AuthorizationFilter>();
+        })
+        .AddApplicationPart(typeof(Startup).Assembly);
     }
 
     // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -52,6 +58,7 @@ namespace MidwayCampaign
       app.UseEndpoints(endpoints =>
       {
         endpoints.MapBlazorHub();
+        endpoints.MapControllers();
         endpoints.MapFallbackToPage("/_Host");
       });
     }
